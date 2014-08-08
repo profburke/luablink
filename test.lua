@@ -1,11 +1,11 @@
 #!/usr/bin/env lua -i
 
-local luablink = require 'luablink'
+local lblink = require 'lblink'
 
-print('LuaBlink version: ' .. luablink._VERSION)
+print('LuaBlink version: ' .. lblink._VERSION)
 print "\n"
-print('VID: ' .. luablink.VID)
-print('PID: ' .. luablink.PID)
+print('VID: ' .. lblink.VID)
+print('PID: ' .. lblink.PID)
 print "\n\n"
 
-b = luablink.open()
+b = lblink.open()

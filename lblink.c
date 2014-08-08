@@ -1,7 +1,7 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "blink1-lib.h"
-#include "luablink.h"
+#include "lblink.h"
 
 // NOTE: we are only dealing with the Mk2 (which was called Mk1 on the website)
 // (the actual mk1 was the first kickstarter version)
@@ -20,24 +20,24 @@ typedef struct blinker {
 
 
 
-// NOTE: This isn't needed since all the functions that
-// manipulate blinks are methods, they can't be called unless
-// the first argument is a valid blink object...
-// blinker *checkBlinker(lua_State *L, int index)
-// {
-//   void *ud = luaL_checkudata(L, index, BLINK_TYPENAME);
-//   luaL_argcheck(L, ud != NULL, index, "'blink' expected");
-//   return (blinker *)ud;
-// }
-
-
-
 
 /************************************************************************************
  *
  * Methods
  *
  ************************************************************************************/
+
+static int lfun_close(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+  blink1_close(bd->device);
+  bd->device = NULL;
+
+  return 0;
+}
+
+
+
 
 static int lfun_firmwareVersion(lua_State *L)
 {
@@ -61,21 +61,11 @@ static int lfun_isMk2(lua_State *L)
 
 
 
-// TODO: make this user-callable as well?
-static int lfun_close(lua_State *L)
-{
-  blinker *bd = lua_touserdata(L, 1);
-  blink1_close(bd->device);
-  bd->device = NULL;
-  
-  fprintf(stderr, "close called");
-
-  return 0;
-}
-
-
-
-
+// TODO: support setting only 1 of the LEDs
+// however this isn't supported by the blink library so we 
+// need to think about how best to do this (possibly use fade
+// w/a very short time)
+// FIXME: why can I call this with missing args?
 static int lfun_setRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -103,6 +93,8 @@ static int lfun_setRGB(lua_State *L)
 }
 
 
+
+
 #define SET(Color, r, g, b) \
   static int lfun_set##Color(lua_State *L) \
   { \
@@ -114,25 +106,74 @@ static int lfun_setRGB(lua_State *L)
   }
 
 
-SET(White, 255, 255, 255)
-
 SET(On, 255, 255, 255)
-
 SET(Off, 0, 0, 0)
-
 SET(Black, 0, 0, 0)
-
+SET(White, 255, 255, 255)
 SET(Red, 255, 0, 0)
-
 SET(Green, 0, 255, 0)
-
 SET(Blue, 0, 0, 255)
-
 SET(Cyan, 0, 255, 255)
-
 SET(Magenta, 255, 0, 255)
-
 SET(Yellow, 255, 255, 0)
+
+
+
+
+static int lfun_fadeToRGB(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+  int millis = lua_tointeger(L, 2);
+  int r = lua_tointeger(L, 3);
+  int g = lua_tointeger(L, 4);
+  int b = lua_tointeger(L, 5);
+  int nLed = luaL_optint(L, 6, 0);
+
+  int result = blink1_fadeToRGBN(bd->device, millis, r, g, b, nLed);
+
+  if (!result) {
+    lua_pushboolean(L, 1);
+  } else {
+    lua_pushnil(L);
+  }
+  return 1;
+}
+
+
+
+
+static int lfun_readRGB(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+  int nLed = luaL_optint(L, 2, 0);
+
+  uint16_t millis;
+  uint8_t r, g, b;
+
+  int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, nLed);
+
+  if (!result) {
+    lua_pushinteger(L, r);
+    lua_pushinteger(L, g);
+    lua_pushinteger(L, b);
+    lua_pushinteger(L, millis);
+    return 4;
+  } else {
+    lua_pushnil(L);
+    return 1;
+  }
+}
+
+
+
+
+static int lfun_sleep(lua_State *L)
+{
+  int millis = luaL_optint(L, 2, 100);
+  blink1_sleep(millis);
+  return 0;
+}
+
 
 
 
@@ -169,28 +210,30 @@ static int lfun_open(lua_State *L)
 
 
 
-
 /************************************************************************************
  *
  * Entry point for library
  *
  ************************************************************************************/
 
-static const luaL_Reg luablink_methods[] = {
+static const luaL_Reg lblink_methods[] = {
   {"firmware", lfun_firmwareVersion},
   {"isMk2", lfun_isMk2},
+
   {"set", lfun_setRGB},
+  {"on", lfun_setOn},
+  {"off", lfun_setOff},
+  {"black", lfun_setBlack},
+  {"white", lfun_setWhite},
   {"red", lfun_setRed},
   {"green", lfun_setGreen},
   {"blue", lfun_setBlue},
   {"cyan", lfun_setCyan},
   {"magenta", lfun_setMagenta},
   {"yellow", lfun_setYellow},
-  {"white", lfun_setWhite},
-  {"on", lfun_setOn},
-  {"black", lfun_setBlack},
-  // {"fade", lfun_fadeToRGB}, // and fadeToRGBN
-  // {"read", lfun_readRGB}, // and readRGBN
+
+  {"fade", lfun_fadeToRGB}, 
+  {"read", lfun_readRGB}, 
   // {"serverdown", lfun_serverdown},
   // {"play", lfun_play},
   // {"loop", lfun_playloop},
@@ -198,16 +241,13 @@ static const luaL_Reg luablink_methods[] = {
   // {"writepatternline", lfun_writePatternLine},
   // {"readpatternline", lfun_readPatternLine},
   // {"savepattern", lfun_savePattern},
-  // error_msg
-  // testtest
-  // sleep
+  {"sleep", lfun_sleep},
   {"__gc", lfun_close},
   {NULL, NULL}
 };
 
 
-
-static const luaL_Reg luablink_functions[] = {
+static const luaL_Reg lblink_functions[] = {
   {"enumerate", lfun_enumerate},
   {"open", lfun_open},
   {NULL, NULL}
@@ -215,7 +255,8 @@ static const luaL_Reg luablink_functions[] = {
 
 
 
-int luaopen_luablink(lua_State *L)
+
+int luaopen_lblink(lua_State *L)
 {
   luaL_newmetatable(L, BLINK_TYPENAME);
 
@@ -224,8 +265,9 @@ int luaopen_luablink(lua_State *L)
   lua_pushvalue(L, -2);
   lua_settable(L, -3);
 
-  luaL_setfuncs(L, luablink_methods, 0); // should we now drop the metatable?
-  luaL_newlib(L, luablink_functions);
+  luaL_setfuncs(L, lblink_methods, 0);
+  // should we now drop the metatable?
+  luaL_newlib(L, lblink_functions);
 
   lua_pushnumber(L, blink1_vid());
   lua_setfield(L, -2, VID_KEY);
