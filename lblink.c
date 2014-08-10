@@ -7,12 +7,16 @@
 // (the actual mk1 was the first kickstarter version)
 
 
+// TODO: implement an "all" ID to turn them all of, set them all to red, etc
+// TODO: implement an "all" LED # to affect them both ??
+
+
 static const char *BLINK_TYPENAME = "Blink1";
 static const char *VID_KEY = "VID";
 static const char *PID_KEY = "PID";
 static const char *VERSION_KEY = "_VERSION";
 
-static const char *VERSION = "0.1.1";
+static const char *VERSION = "0.5.1";
 
 typedef struct blinker {
   blink1_device *device;
@@ -183,7 +187,7 @@ static int lfun_sleep(lua_State *L)
  *
  ************************************************************************************/
 
-static int lfun_enumerate(lua_State *L)
+static int lfun_nDevices(lua_State *L)
 {
   lua_pushnumber(L, blink1_enumerate());
   return 1;
@@ -192,18 +196,35 @@ static int lfun_enumerate(lua_State *L)
 
 
 
+static int lfun_list(lua_State *L)
+{
+  return 0;
+}
+
+
+
+
 // TODO: pass optional index
 static int lfun_open(lua_State *L)
 {
+  int devid = luaL_optint(L, 1, 0);
+  int nDevices = blink1_enumerate();
+
+  // TODO: check that 0 <= devid < nDevices
+
   blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
   b->device = NULL;
 
   luaL_getmetatable(L, BLINK_TYPENAME);
   lua_setmetatable(L, -2);
 
-  b->device = blink1_open();
-  // TODO: if blink1_open returns NULL, then error:  luaL_error(L, "could not open blink1...");
-
+  b->device = blink1_openById(devid);
+  if (b->device == NULL) {
+    // TODO: remove/release the userdatum
+    // TODO: include device id in error message
+    luaL_error(L, "could not open blink1");
+  }
+  
   return 1;
 }
 
@@ -235,12 +256,20 @@ static const luaL_Reg lblink_methods[] = {
   {"fade", lfun_fadeToRGB}, 
   {"read", lfun_readRGB}, 
   // {"serverdown", lfun_serverdown},
+
+  // play and loop should both make use of blink1_playloop
+  // and in fact, loop can call play
+  // pass all the params in a table instead of positionally?
+
   // {"play", lfun_play},
   // {"loop", lfun_playloop},
+  // {"stop", lfun_stop},
+
   // {"readplay", lfun_readplay},
   // {"writepatternline", lfun_writePatternLine},
   // {"readpatternline", lfun_readPatternLine},
   // {"savepattern", lfun_savePattern},
+
   {"sleep", lfun_sleep},
   {"__gc", lfun_close},
   {NULL, NULL}
@@ -248,7 +277,8 @@ static const luaL_Reg lblink_methods[] = {
 
 
 static const luaL_Reg lblink_functions[] = {
-  {"enumerate", lfun_enumerate},
+  {"nDevices", lfun_nDevices},
+  {"list", lfun_list}, // return a table describing all attached devices
   {"open", lfun_open},
   {NULL, NULL}
 };
