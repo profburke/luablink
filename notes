@@ -1,4 +1,8 @@
 
-Blink lib at
+- Would be nice if we could specify version number in one place and
+  have rockspec and C source auto-updated upon build
 
-https://github.com/todbot/blink1.git
+- Blink lib at https://github.com/todbot/blink1.git
+  can we detect if it exists and, if not, download and build it?
+
+

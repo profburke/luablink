@@ -1,22 +1,40 @@
+/*** Lua binding to the Blink1 library.
+ * Lua binding to the blink(1) library. The main function in this library
+ * allows you to create Lua object bound to a blink(1) so you can control
+ * it with Lua code.
+ *
+ * @module lblink
+ * @author Matthew M. Burke <matthew@bluedino.net>
+ * @copyright 2014 BlueDino Software
+ *
+ */
+
+// TODO: http://www.rapidtables.com/web/color/RGB_Color.htm
+
+#include <stdio.h>
+#include <string.h>
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "blink1-lib.h"
 #include "lblink.h"
 
-// NOTE: we are only dealing with the Mk2 (which was called Mk1 on the website)
-// (the actual mk1 was the first kickstarter version)
+// NOTE: we are only dealing with the Mk2
 
 
 // TODO: implement an "all" ID to turn them all of, set them all to red, etc
 // TODO: implement an "all" LED # to affect them both ??
 
+#define BADDEVSPEC_MSG "Must be either an integer in the range [0, n-1] (where n is the number of attached blink(1) devices) or a valid blink(1) serial number."
+#define BADDEVID_MSG "ID must be in range [0,n-1] where n is the number of attached blink(1) devices."
 
-static const char *BLINK_TYPENAME = "Blink1";
+
+static const char *BLINK_TYPENAME = "net.bluedino.Blink1";
 static const char *VID_KEY = "VID";
 static const char *PID_KEY = "PID";
 static const char *VERSION_KEY = "_VERSION";
 
-static const char *VERSION = "0.5.1";
+const char *LUABLINK_VERSION = "0.6.1";
 
 typedef struct blinker {
   blink1_device *device;
@@ -31,9 +49,13 @@ typedef struct blinker {
  *
  ************************************************************************************/
 
+// TODO: set device to off first?
+// FIXME: note that gc isn't (necessarily) called
+// when object is set to nil
 static int lfun_close(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
+  blink1_setRGB(bd->device, 0, 0, 0);
   blink1_close(bd->device);
   bd->device = NULL;
 
@@ -69,7 +91,6 @@ static int lfun_isMk2(lua_State *L)
 // however this isn't supported by the blink library so we 
 // need to think about how best to do this (possibly use fade
 // w/a very short time)
-// FIXME: why can I call this with missing args?
 static int lfun_setRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -120,7 +141,7 @@ SET(Blue, 0, 0, 255)
 SET(Cyan, 0, 255, 255)
 SET(Magenta, 255, 0, 255)
 SET(Yellow, 255, 255, 0)
-
+SET(Orange, 255, 165, 0)
 
 
 
@@ -164,7 +185,8 @@ static int lfun_readRGB(lua_State *L)
     return 4;
   } else {
     lua_pushnil(L);
-    return 1;
+    lua_pushstring(L, "could not retrieve rgb");
+    return 2;
   }
 }
 
@@ -187,7 +209,13 @@ static int lfun_sleep(lua_State *L)
  *
  ************************************************************************************/
 
-static int lfun_nDevices(lua_State *L)
+/***
+ Returns count of attached blink(1) devices.
+ @function enumerate
+ @return count of attached blink(1) devices.
+ *
+ */
+static int lfun_enumerate(lua_State *L)
 {
   lua_pushnumber(L, blink1_enumerate());
   return 1;
@@ -196,34 +224,82 @@ static int lfun_nDevices(lua_State *L)
 
 
 
+/***
+ List of all attached blink(1) devices.
+ @function list
+ @return table where each entry is information on an attached blink(1) device.
+ *
+ */
+// TODO: change this so that each entry is a table
+// consisting of id, serial#, mk2/mk1
+// there's a mis-match here since in Lua
+// tables are (typically) 1-based...
 static int lfun_list(lua_State *L)
 {
-  return 0;
+  char buf[256];
+
+  int nDevices = blink1_enumerate();
+  lua_createtable(L, nDevices, 0);
+
+  for (int i = 0; i < nDevices; i++) {
+    sprintf(buf, "serialnum: %s %s", 
+            blink1_getCachedSerial(i), (blink1_isMk2ById(i)?"(mk2)":""));
+
+    lua_pushinteger(L, i);
+    lua_pushlstring(L, buf, strlen(buf));
+    lua_settable(L, -3);
+  }
+
+  return 1;
 }
 
 
 
-
-// TODO: pass optional index
+/*** Open a blink(1) device.
+ *
+ * Create a userdata bound to a particular blink(1) device. If this function
+ * is called without a parameter, it returns a userdata bound to the first blink(1) it finds.
+ *
+ * Alternatively, you can specify either an integer ID or a string of 8 hexadecimal characters.
+ * The integer ID must be in the range [0, n-1] (where n is the number of attached blink(1) devices).
+ * The hex string is the serial number of a particular device.
+ *
+ * @function open
+ * @tparam string[opt] devid optional device ID/serial number
+ * @treturn userdata object bound to the specified blink(1) device.
+ *
+ */
 static int lfun_open(lua_State *L)
 {
-  int devid = luaL_optint(L, 1, 0);
-  int nDevices = blink1_enumerate();
+  int devid = -1;
+  char serial[16] = {'0'};
 
-  // TODO: check that 0 <= devid < nDevices
+  if (lua_isnumber(L, 1)) {
+    devid = luaL_checkint(L, 1);
+    int nDevices = blink1_enumerate();
+    luaL_argcheck(L, ( (-1 < devid) && (devid < nDevices) ),
+                  1, BADDEVID_MSG);
+  } else if (lua_isstring(L, 1)) {
+    strcpy(serial, lua_tostring(L, 1));
+  } else {
+    return luaL_argerror(L, 1, BADDEVSPEC_MSG);
+  }
 
   blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
   b->device = NULL;
 
+  if (devid > -1) {
+    b->device = blink1_openById(devid);
+  } else {
+    b->device = blink1_openBySerial(serial);
+  }
+
+  if (b->device == NULL) {
+    luaL_error(L, "could not open blink1 with id %d", devid);
+  }
+
   luaL_getmetatable(L, BLINK_TYPENAME);
   lua_setmetatable(L, -2);
-
-  b->device = blink1_openById(devid);
-  if (b->device == NULL) {
-    // TODO: remove/release the userdatum
-    // TODO: include device id in error message
-    luaL_error(L, "could not open blink1");
-  }
   
   return 1;
 }
@@ -233,10 +309,16 @@ static int lfun_open(lua_State *L)
 
 /************************************************************************************
  *
- * Entry point for library
+ * Library Declaration
  *
  ************************************************************************************/
 
+
+/*
+ *
+ * List of members on blink objects.
+ *
+ */
 static const luaL_Reg lblink_methods[] = {
   {"firmware", lfun_firmwareVersion},
   {"isMk2", lfun_isMk2},
@@ -252,6 +334,7 @@ static const luaL_Reg lblink_methods[] = {
   {"cyan", lfun_setCyan},
   {"magenta", lfun_setMagenta},
   {"yellow", lfun_setYellow},
+  {"orange", lfun_setOrange},
 
   {"fade", lfun_fadeToRGB}, 
   {"read", lfun_readRGB}, 
@@ -276,8 +359,16 @@ static const luaL_Reg lblink_methods[] = {
 };
 
 
+
+
+/*
+ *
+ * List of library functions. We also set a few data values
+ * in the open function.
+ *
+ */
 static const luaL_Reg lblink_functions[] = {
-  {"nDevices", lfun_nDevices},
+  {"enumerate", lfun_enumerate},
   {"list", lfun_list}, // return a table describing all attached devices
   {"open", lfun_open},
   {NULL, NULL}
@@ -286,11 +377,21 @@ static const luaL_Reg lblink_functions[] = {
 
 
 
-int luaopen_lblink(lua_State *L)
+/*
+ *
+ * Main entry point for library.
+ *
+ * This function performs the following tasks:
+ *
+ * - create and populate the metatable for blink objects
+ *
+ * - create and populate the library table
+ *
+ */
+LUABLINK_API int luaopen_lblink(lua_State *L)
 {
   luaL_newmetatable(L, BLINK_TYPENAME);
 
-  // metatable.__index = metatable
   lua_pushstring(L, "__index");
   lua_pushvalue(L, -2);
   lua_settable(L, -3);
@@ -305,7 +406,7 @@ int luaopen_lblink(lua_State *L)
   lua_pushnumber(L, blink1_pid());
   lua_setfield(L, -2, PID_KEY);
   
-  lua_pushstring(L, VERSION);
+  lua_pushstring(L, LUABLINK_VERSION);
   lua_setfield(L, -2, VERSION_KEY);
 
   return 1;
