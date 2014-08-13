@@ -64,7 +64,8 @@ static int lfun_close(lua_State *L)
 
 
 
-
+/// Returns the firmware version of the blink(1) device.
+// @function fwversion
 static int lfun_firmwareVersion(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -255,6 +256,7 @@ static int lfun_list(lua_State *L)
 
 
 
+
 /*** Open a blink(1) device.
  *
  * Create a userdata bound to a particular blink(1) device. If this function
@@ -265,28 +267,43 @@ static int lfun_list(lua_State *L)
  * The hex string is the serial number of a particular device.
  *
  * @function open
- * @tparam string[opt] devid optional device ID/serial number
+ * @tparam ?string|int devid optional device ID/serial number
  * @treturn userdata object bound to the specified blink(1) device.
  *
  */
 static int lfun_open(lua_State *L)
 {
   int devid = -1;
-  char serial[16] = {'0'};
+  char serial[9] = {'\0', '\0', '\0', 
+                    '\0', '\0', '\0',
+                    '\0', '\0', '\0'};
 
-  if (lua_isnumber(L, 1)) {
+
+  int nDevices = blink1_enumerate();
+  if (0 == nDevices) {
+    return luaL_error(L, "No blink(1) devices attached.");
+  }
+
+
+  // Do we really need the damned serial # to be read in as a string?
+  // Can't we just let it autoconvert from hex string to number?
+  if (0 == lua_gettop(L)) {
+    devid = 0;
+  } else if (lua_isstring(L, 1)) {
+    // make sure to copy at most 8 characters
+    strncpy(serial, lua_tostring(L, 1), 8);
+  } else if (lua_isnumber(L, 1)) {
     devid = luaL_checkint(L, 1);
-    int nDevices = blink1_enumerate();
     luaL_argcheck(L, ( (-1 < devid) && (devid < nDevices) ),
                   1, BADDEVID_MSG);
-  } else if (lua_isstring(L, 1)) {
-    strcpy(serial, lua_tostring(L, 1));
   } else {
     return luaL_argerror(L, 1, BADDEVSPEC_MSG);
   }
 
+
   blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
   b->device = NULL;
+
 
   if (devid > -1) {
     b->device = blink1_openById(devid);
@@ -294,12 +311,19 @@ static int lfun_open(lua_State *L)
     b->device = blink1_openBySerial(serial);
   }
 
+
   if (b->device == NULL) {
-    luaL_error(L, "could not open blink1 with id %d", devid);
+    if (devid > -1) {
+      return luaL_error(L, "could not open blink(1) with id %d", devid);
+    } else {
+      return luaL_error(L, "could not open blink(1) with serial #%s", serial);
+    }
   }
+
 
   luaL_getmetatable(L, BLINK_TYPENAME);
   lua_setmetatable(L, -2);
+
   
   return 1;
 }
@@ -320,7 +344,7 @@ static int lfun_open(lua_State *L)
  *
  */
 static const luaL_Reg lblink_methods[] = {
-  {"firmware", lfun_firmwareVersion},
+  {"fwversion", lfun_firmwareVersion},
   {"isMk2", lfun_isMk2},
 
   {"set", lfun_setRGB},
