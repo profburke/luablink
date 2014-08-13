@@ -132,8 +132,14 @@ static int lfun_setRGB(lua_State *L)
   }
 
 
+/// Turns the blink(1) on (displaying white)
+// @function on
 SET(On, 255, 255, 255)
+
+/// Turns the blink(1) off
+// @function off
 SET(Off, 0, 0, 0)
+
 SET(Black, 0, 0, 0)
 SET(White, 255, 255, 255)
 SET(Red, 255, 0, 0)
@@ -378,6 +384,7 @@ static const luaL_Reg lblink_methods[] = {
   // {"savepattern", lfun_savePattern},
 
   {"sleep", lfun_sleep},
+  {"close", lfun_close},
   {"__gc", lfun_close},
   {NULL, NULL}
 };
