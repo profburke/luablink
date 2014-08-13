@@ -1,19 +1,15 @@
 #!/usr/bin/env lua 
 
--- figure out a better way to do this...
-package.cpath = package.cpath .. ';' .. '../src/?.so'
 
+-- In case we want to run tests when library is built but not installed.
+local LUA_PATH_SEP = package.config:sub(3, 3)
+package.cpath = package.cpath .. LUA_PATH_SEP .. '../src/?.so'
 
-local lblink = require 'lblink'
-
-local numericvars = {'VID', 'PID' }
-local stringvars = { '_VERSION' }
-local functions = { 'enumerate', 'list', 'open' }
 
 
 local function maketester(t)
    return function(library, name)
-      assert(type(library[name]) == t, name .. ' not defined as a ' .. t .. '.')
+      assert(type(library[name]) == t, string.format('%s not defined as a %s.', name, t)
    end
 end
 
@@ -21,6 +17,17 @@ end
 local testFunctionDefined = maketester('function')
 local testStringsDefined = maketester('string')
 local testNumericDefined = maketester('number')
+
+
+
+
+
+
+local lblink = require 'lblink'
+
+local numericvars = {'VID', 'PID' }
+local stringvars = { '_VERSION' }
+local functions = { 'enumerate', 'list', 'open' }
 
 
 for _,n in ipairs(numericvars) do
