@@ -3,14 +3,13 @@
  * allows you to create Lua object bound to a blink(1) so you can control
  * it with Lua code.
  *
+ * NOTE: this library only implements the Mk 2 versions of the various functions.
+ *
  * @module lblink
  * @author Matthew M. Burke <matthew@bluedino.net>
  * @copyright 2014 BlueDino Software
  *
  */
-
-// TODO: http://www.rapidtables.com/web/color/RGB_Color.htm
-
 #include <stdio.h>
 #include <string.h>
 
@@ -19,15 +18,8 @@
 #include "blink1-lib.h"
 #include "lblink.h"
 
-// NOTE: we are only dealing with the Mk2
-
-
-// TODO: implement an "all" ID to turn them all of, set them all to red, etc
-// TODO: implement an "all" LED # to affect them both ??
-
 #define BADDEVSPEC_MSG "Must be either an integer in the range [0, n-1] (where n is the number of attached blink(1) devices) or a valid blink(1) serial number."
 #define BADDEVID_MSG "ID must be in range [0,n-1] where n is the number of attached blink(1) devices."
-
 
 static const char *BLINK_TYPENAME = "net.bluedino.Blink1";
 static const char *VID_KEY = "VID";
@@ -49,9 +41,9 @@ typedef struct blinker {
  *
  ************************************************************************************/
 
-// TODO: set device to off first?
-// FIXME: note that gc isn't (necessarily) called
-// when object is set to nil
+
+/// Turn the device off then close it.
+// @function close
 static int lfun_close(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -61,6 +53,7 @@ static int lfun_close(lua_State *L)
 
   return 0;
 }
+
 
 
 
@@ -77,6 +70,21 @@ static int lfun_firmwareVersion(lua_State *L)
 
 
 
+/// Returns the device's serial number.
+// @function serial
+static int lfun_serialNumber(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+  lua_pushstring(L, blink1_getSerialForDev(bd->device));
+
+  return 1;
+}
+
+
+
+
+/// Returns true/false if the blink(1) device is/isn't a Mark 2.
+// @function isMk2
 static int lfun_isMk2(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -152,6 +160,9 @@ SET(Orange, 255, 165, 0)
 
 
 
+
+/// Fades device to give RGB over given number of milliseconds.
+// @function fade
 static int lfun_fadeToRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -174,6 +185,8 @@ static int lfun_fadeToRGB(lua_State *L)
 
 
 
+/// Returns the last set RGB value for the given device/LED.
+// @function read
 static int lfun_readRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -200,26 +213,16 @@ static int lfun_readRGB(lua_State *L)
 
 
 
-static int lfun_sleep(lua_State *L)
-{
-  int millis = luaL_optint(L, 2, 100);
-  blink1_sleep(millis);
-  return 0;
-}
-
-
-
-
 /************************************************************************************
  *
  * Functions
  *
  ************************************************************************************/
 
-/***
- Returns count of attached blink(1) devices.
- @function enumerate
- @return count of attached blink(1) devices.
+/*** Returns count of attached blink(1) devices.
+ *
+ * @function enumerate
+ * @treturn int count of attached blink(1) devices
  *
  */
 static int lfun_enumerate(lua_State *L)
@@ -231,16 +234,15 @@ static int lfun_enumerate(lua_State *L)
 
 
 
-/***
- List of all attached blink(1) devices.
- @function list
- @return table where each entry is information on an attached blink(1) device.
- *
- */
 // TODO: change this so that each entry is a table
 // consisting of id, serial#, mk2/mk1
 // there's a mis-match here since in Lua
 // tables are (typically) 1-based...
+/*** List of all attached blink(1) devices.
+ * @function list
+ * @return table where each entry is information on an attached blink(1) device.
+ *
+ */
 static int lfun_list(lua_State *L)
 {
   char buf[256];
@@ -337,6 +339,18 @@ static int lfun_open(lua_State *L)
 
 
 
+/// Platform-independent millisecond-resolution sleep.
+// @function sleep
+static int lfun_sleep(lua_State *L)
+{
+  int millis = luaL_optint(L, 2, 100);
+  blink1_sleep(millis);
+  return 0;
+}
+
+
+
+
 /************************************************************************************
  *
  * Library Declaration
@@ -351,8 +365,9 @@ static int lfun_open(lua_State *L)
  */
 static const luaL_Reg lblink_methods[] = {
   {"fwversion", lfun_firmwareVersion},
+  {"serial", lfun_serialNumber},
   {"isMk2", lfun_isMk2},
-
+  
   {"set", lfun_setRGB},
   {"on", lfun_setOn},
   {"off", lfun_setOff},
@@ -368,7 +383,7 @@ static const luaL_Reg lblink_methods[] = {
 
   {"fade", lfun_fadeToRGB}, 
   {"read", lfun_readRGB}, 
-  // {"serverdown", lfun_serverdown},
+
 
   // play and loop should both make use of blink1_playloop
   // and in fact, loop can call play
@@ -383,7 +398,8 @@ static const luaL_Reg lblink_methods[] = {
   // {"readpatternline", lfun_readPatternLine},
   // {"savepattern", lfun_savePattern},
 
-  {"sleep", lfun_sleep},
+  // {"serverdown", lfun_serverdown},
+
   {"close", lfun_close},
   {"__gc", lfun_close},
   {NULL, NULL}
@@ -400,8 +416,9 @@ static const luaL_Reg lblink_methods[] = {
  */
 static const luaL_Reg lblink_functions[] = {
   {"enumerate", lfun_enumerate},
-  {"list", lfun_list}, // return a table describing all attached devices
+  {"list", lfun_list}, 
   {"open", lfun_open},
+  {"sleep", lfun_sleep},
   {NULL, NULL}
 };
 
@@ -415,7 +432,6 @@ static const luaL_Reg lblink_functions[] = {
  * This function performs the following tasks:
  *
  * - create and populate the metatable for blink objects
- *
  * - create and populate the library table
  *
  */
