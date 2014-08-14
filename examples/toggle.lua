@@ -1,5 +1,3 @@
---- Toggle the first blink(1) between red and blue. 
--- @script toggle
 
 local lblink = require 'lblink'
 

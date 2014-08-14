@@ -38,12 +38,162 @@ typedef struct blinker {
 
 
 
+
 /************************************************************************************
  *
- * Methods
+ * Functions
  *
  ************************************************************************************/
 
+/*** Returns count of attached blink(1) devices.
+ *
+ * @function enumerate
+ * @treturn int number of attached devices
+ *
+ */
+static int lfun_enumerate(lua_State *L)
+{
+  lua_pushnumber(L, blink1_enumerate());
+  return 1;
+}
+
+
+
+
+// TODO: change this so that each entry is a table
+// consisting of id, serial#, mk2/mk1
+// there's a mis-match here since in Lua
+// tables are (typically) 1-based...
+
+
+/*** Returns a table describing all attached devices.
+ *
+ * @function list
+ * @treturn table each entry describes an attached device
+ *
+ */
+static int lfun_list(lua_State *L)
+{
+  char buf[256];
+
+  int nDevices = blink1_enumerate();
+  lua_createtable(L, nDevices, 0);
+
+  for (int i = 0; i < nDevices; i++) {
+    sprintf(buf, "serialnum: %s %s", 
+            blink1_getCachedSerial(i), (blink1_isMk2ById(i)?"(mk2)":""));
+
+    lua_pushinteger(L, i);
+    lua_pushlstring(L, buf, strlen(buf));
+    lua_settable(L, -3);
+  }
+
+  return 1;
+}
+
+
+
+
+/*** Opens a blink(1) device.
+ *
+ * Create a userdata bound to a particular device. If this function
+ * is called without a parameter, it returns a userdata bound to the first device it finds.
+ *
+ * Otherwise it attempts to bind to the specified device. A particular device is specified
+ * either by an integer ID or a string of 8 hexadecimal characters.
+ * The integer ID must be between 0 and n-1 (where n is the number of attached devices).
+ * The hex string is the serial number of a particular device.
+ *
+ * @function open
+ * @tparam[opt] ?string|int devspec device ID or serial number
+ * @treturn userdata object bound to a device
+ * @raise error if TBD
+ *
+ */
+static int lfun_open(lua_State *L)
+{
+  int devid = -1;
+  char serial[9] = {'\0', '\0', '\0', 
+                    '\0', '\0', '\0',
+                    '\0', '\0', '\0'};
+
+
+  int nDevices = blink1_enumerate();
+  if (0 == nDevices) {
+    return luaL_error(L, "No blink(1) devices attached.");
+  }
+
+
+  // @fixme I'm still not happy with the error handling
+  if (0 == lua_gettop(L)) {
+    devid = 0;
+  } else if (lua_isnumber(L, 1)) {
+    int argval = lua_tointeger(L, 1);
+    if ( (-1 < argval) && (argval < nDevices) ) {
+      devid = argval;
+    } else {
+      strncpy(serial, lua_tostring(L, 1), 8);
+    }
+  } else {
+    return luaL_argerror(L, 1, BADDEVSPEC_MSG);
+  }
+
+
+  blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
+  b->device = NULL;
+
+
+  if (devid > -1) {
+    b->device = blink1_openById(devid);
+  } else {
+    b->device = blink1_openBySerial(serial);
+  }
+
+
+  if (b->device == NULL) {
+    if (devid > -1) {
+      return luaL_error(L, "could not open blink(1) with id %d", devid);
+    } else {
+      return luaL_error(L, "could not open blink(1) with serial #%s", serial);
+    }
+  }
+
+
+  luaL_getmetatable(L, BLINK_TYPENAME);
+  lua_setmetatable(L, -2);
+
+  
+  return 1;
+}
+
+
+
+
+/*** Platform-independent millisecond-resolution sleep.
+ *
+ * @function sleep
+ * @tparam[opt] int millis number of milliseconds to pause; if not
+ * specified, defaults to 100
+ *
+ */
+static int lfun_sleep(lua_State *L)
+{
+  int millis = luaL_optint(L, 1, 100);
+  blink1_sleep(millis);
+  return 0;
+}
+
+
+
+
+/****************************************************************************/
+
+
+/*** The Blink(1) device class.
+ *
+ * @type Device
+ *
+ */
 
 /*** Turns the device off, then closes it.
  *
@@ -274,148 +424,6 @@ static int lfun_stop(lua_State *L)
     lua_pushstring(L, "Error stopping play.");
     return 2;
   }
-}
-
-
-
-
-/************************************************************************************
- *
- * Functions
- *
- ************************************************************************************/
-
-/*** Returns count of attached blink(1) devices.
- *
- * @function enumerate
- * @treturn int count of attached blink(1) devices
- *
- */
-static int lfun_enumerate(lua_State *L)
-{
-  lua_pushnumber(L, blink1_enumerate());
-  return 1;
-}
-
-
-
-
-// TODO: change this so that each entry is a table
-// consisting of id, serial#, mk2/mk1
-// there's a mis-match here since in Lua
-// tables are (typically) 1-based...
-
-/*** Returns a list of all attached blink(1) devices.
- *
- * @function list
- * @return table where each entry is information on an attached blink(1) device.
- *
- */
-static int lfun_list(lua_State *L)
-{
-  char buf[256];
-
-  int nDevices = blink1_enumerate();
-  lua_createtable(L, nDevices, 0);
-
-  for (int i = 0; i < nDevices; i++) {
-    sprintf(buf, "serialnum: %s %s", 
-            blink1_getCachedSerial(i), (blink1_isMk2ById(i)?"(mk2)":""));
-
-    lua_pushinteger(L, i);
-    lua_pushlstring(L, buf, strlen(buf));
-    lua_settable(L, -3);
-  }
-
-  return 1;
-}
-
-
-
-
-/*** Opens a blink(1) device.
- *
- * Create a userdata bound to a particular blink(1) device. If this function
- * is called without a parameter, it returns a userdata bound to the first blink(1) it finds.
- *
- * Alternatively, you can specify either an integer ID or a string of 8 hexadecimal characters.
- * The integer ID must be in the range [0, n-1] (where n is the number of attached blink(1) devices).
- * The hex string is the serial number of a particular device.
- *
- * @function open
- * @tparam ?string|int devid optional device ID/serial number
- * @treturn userdata object bound to the specified blink(1) device.
- *
- */
-static int lfun_open(lua_State *L)
-{
-  int devid = -1;
-  char serial[9] = {'\0', '\0', '\0', 
-                    '\0', '\0', '\0',
-                    '\0', '\0', '\0'};
-
-
-  int nDevices = blink1_enumerate();
-  if (0 == nDevices) {
-    return luaL_error(L, "No blink(1) devices attached.");
-  }
-
-
-  // I'm still not happy with the error handling
-  if (0 == lua_gettop(L)) {
-    devid = 0;
-  } else if (lua_isnumber(L, 1)) {
-    int argval = lua_tointeger(L, 1);
-    if ( (-1 < argval) && (argval < nDevices) ) {
-      devid = argval;
-    } else {
-      strncpy(serial, lua_tostring(L, 1), 8);
-    }
-  } else {
-    return luaL_argerror(L, 1, BADDEVSPEC_MSG);
-  }
-
-
-  blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
-  b->device = NULL;
-
-
-  if (devid > -1) {
-    b->device = blink1_openById(devid);
-  } else {
-    b->device = blink1_openBySerial(serial);
-  }
-
-
-  if (b->device == NULL) {
-    if (devid > -1) {
-      return luaL_error(L, "could not open blink(1) with id %d", devid);
-    } else {
-      return luaL_error(L, "could not open blink(1) with serial #%s", serial);
-    }
-  }
-
-
-  luaL_getmetatable(L, BLINK_TYPENAME);
-  lua_setmetatable(L, -2);
-
-  
-  return 1;
-}
-
-
-
-
-/*** Platform-independent millisecond-resolution sleep.
- *
- * @function sleep
- *
- */
-static int lfun_sleep(lua_State *L)
-{
-  int millis = luaL_optint(L, 1, 100);
-  blink1_sleep(millis);
-  return 0;
 }
 
 
