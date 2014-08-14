@@ -7,5 +7,7 @@
 // need to think about how best to do this (possibly use fade
 // w/a very short time)
 
+// {"serverdown", lfun_serverdown},
+
 
 
