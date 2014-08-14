@@ -42,8 +42,11 @@ typedef struct blinker {
  ************************************************************************************/
 
 
-/// Turn the device off then close it.
-// @function close
+/*** Turns the device off, then closes it.
+ *
+ * @function close
+ *
+ */
 static int lfun_close(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -57,8 +60,11 @@ static int lfun_close(lua_State *L)
 
 
 
-/// Returns the firmware version of the blink(1) device.
-// @function fwversion
+/*** Returns the firmware version of the device.
+ *
+ * @function fwversion
+ *
+ */
 static int lfun_firmwareVersion(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -70,8 +76,11 @@ static int lfun_firmwareVersion(lua_State *L)
 
 
 
-/// Returns the device's serial number.
-// @function serial
+/*** Returns the serial number of the device.
+ *
+ * @function serial
+ *
+ */
 static int lfun_serialNumber(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -83,8 +92,11 @@ static int lfun_serialNumber(lua_State *L)
 
 
 
-/// Returns true/false if the blink(1) device is/isn't a Mark 2.
-// @function isMk2
+/*** Returns true/false if the device is/isn't a Mark 2.
+ *
+ * @function isMk2
+ *
+ */
 static int lfun_isMk2(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -96,10 +108,11 @@ static int lfun_isMk2(lua_State *L)
 
 
 
-// TODO: support setting only 1 of the LEDs
-// however this isn't supported by the blink library so we 
-// need to think about how best to do this (possibly use fade
-// w/a very short time)
+/*** Sets the device to the given RGB.
+ *
+ * @function set
+ *
+ */
 static int lfun_setRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -161,8 +174,11 @@ SET(Orange, 255, 165, 0)
 
 
 
-/// Fades device to give RGB over given number of milliseconds.
-// @function fade
+/*** Fades device to given RGB over given number of milliseconds.
+ *
+ * @function fade
+ *
+ */
 static int lfun_fadeToRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -185,8 +201,11 @@ static int lfun_fadeToRGB(lua_State *L)
 
 
 
-/// Returns the last set RGB value for the given device/LED.
-// @function read
+/*** Returns the last RGB value for the given device.
+ *
+ * @function read
+ *
+ */
 static int lfun_readRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
@@ -238,7 +257,9 @@ static int lfun_enumerate(lua_State *L)
 // consisting of id, serial#, mk2/mk1
 // there's a mis-match here since in Lua
 // tables are (typically) 1-based...
-/*** List of all attached blink(1) devices.
+
+/*** Returns a list of all attached blink(1) devices.
+ *
  * @function list
  * @return table where each entry is information on an attached blink(1) device.
  *
@@ -265,7 +286,7 @@ static int lfun_list(lua_State *L)
 
 
 
-/*** Open a blink(1) device.
+/*** Opens a blink(1) device.
  *
  * Create a userdata bound to a particular blink(1) device. If this function
  * is called without a parameter, it returns a userdata bound to the first blink(1) it finds.
@@ -293,17 +314,16 @@ static int lfun_open(lua_State *L)
   }
 
 
-  // Do we really need the damned serial # to be read in as a string?
-  // Can't we just let it autoconvert from hex string to number?
+  // I'm still not happy with the error handling
   if (0 == lua_gettop(L)) {
     devid = 0;
-  } else if (lua_isstring(L, 1)) {
-    // make sure to copy at most 8 characters
-    strncpy(serial, lua_tostring(L, 1), 8);
   } else if (lua_isnumber(L, 1)) {
-    devid = luaL_checkint(L, 1);
-    luaL_argcheck(L, ( (-1 < devid) && (devid < nDevices) ),
-                  1, BADDEVID_MSG);
+    int argval = lua_tointeger(L, 1);
+    if ( (-1 < argval) && (argval < nDevices) ) {
+      devid = argval;
+    } else {
+      strncpy(serial, lua_tostring(L, 1), 8);
+    }
   } else {
     return luaL_argerror(L, 1, BADDEVSPEC_MSG);
   }
@@ -339,11 +359,14 @@ static int lfun_open(lua_State *L)
 
 
 
-/// Platform-independent millisecond-resolution sleep.
-// @function sleep
+/*** Platform-independent millisecond-resolution sleep.
+ *
+ * @function sleep
+ *
+ */
 static int lfun_sleep(lua_State *L)
 {
-  int millis = luaL_optint(L, 2, 100);
+  int millis = luaL_optint(L, 1, 100);
   blink1_sleep(millis);
   return 0;
 }
