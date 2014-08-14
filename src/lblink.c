@@ -18,8 +18,11 @@
 #include "blink1-lib.h"
 #include "lblink.h"
 
-#define BADDEVSPEC_MSG "Must be either an integer in the range [0, n-1] (where n is the number of attached blink(1) devices) or a valid blink(1) serial number."
-#define BADDEVID_MSG "ID must be in range [0,n-1] where n is the number of attached blink(1) devices."
+#define PATTERNPLAY_START 1
+#define PATTERNPLAY_STOP 0
+
+#define BADDEVSPEC_MSG "Must be either an integer in [0, n-1] (where n is the number of attached devices) or a valid serial number."
+#define BADDEVID_MSG "ID must be in [0,n-1] where n is the number of attached devices."
 
 static const char *BLINK_TYPENAME = "net.bluedino.Blink1";
 static const char *VID_KEY = "VID";
@@ -232,6 +235,50 @@ static int lfun_readRGB(lua_State *L)
 
 
 
+/// Plays the current pattern.
+// @function play
+static int lfun_play(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+
+  // TODO: optional arguments: startpos, endpos, count
+
+  int result = blink1_playloop(bd->device, PATTERNPLAY_START, 0, 0, 0);
+
+  if (!result) {
+    lua_pushboolean(L, 1);
+    return 1;
+  } else {
+    lua_pushnil(L);
+    lua_pushstring(L, "Error starting play.");
+    return 2;
+  }
+}
+
+
+
+
+/// Stops playing the current pattern.
+// @function stop
+static int lfun_stop(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+
+  int result = blink1_playloop(bd->device, PATTERNPLAY_STOP, 0, 0, 0);
+
+  if (!result) {
+    lua_pushboolean(L, 1);
+    return 1;
+  } else {
+    lua_pushnil(L);
+    lua_pushstring(L, "Error stopping play.");
+    return 2;
+  }
+}
+
+
+
+
 /************************************************************************************
  *
  * Functions
@@ -390,7 +437,6 @@ static const luaL_Reg lblink_methods[] = {
   {"fwversion", lfun_firmwareVersion},
   {"serial", lfun_serialNumber},
   {"isMk2", lfun_isMk2},
-  
   {"set", lfun_setRGB},
   {"on", lfun_setOn},
   {"off", lfun_setOff},
@@ -403,25 +449,15 @@ static const luaL_Reg lblink_methods[] = {
   {"magenta", lfun_setMagenta},
   {"yellow", lfun_setYellow},
   {"orange", lfun_setOrange},
-
   {"fade", lfun_fadeToRGB}, 
   {"read", lfun_readRGB}, 
-
-
-  // play and loop should both make use of blink1_playloop
-  // and in fact, loop can call play
-  // pass all the params in a table instead of positionally?
-
-  // {"play", lfun_play},
-  // {"loop", lfun_playloop},
-  // {"stop", lfun_stop},
+  {"play", lfun_play},
+  {"stop", lfun_stop},
 
   // {"readplay", lfun_readplay},
   // {"writepatternline", lfun_writePatternLine},
   // {"readpatternline", lfun_readPatternLine},
   // {"savepattern", lfun_savePattern},
-
-  // {"serverdown", lfun_serverdown},
 
   {"close", lfun_close},
   {"__gc", lfun_close},
@@ -445,6 +481,9 @@ static const luaL_Reg lblink_functions[] = {
   {NULL, NULL}
 };
 
+
+
+// DOES OFF NEED TO ALSO STOP PLAY OF PATTERN?
 
 
 
