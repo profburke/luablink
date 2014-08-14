@@ -10,4 +10,5 @@
 // {"serverdown", lfun_serverdown},
 
 
+// Methods should give errors when called on closed devices.
 
