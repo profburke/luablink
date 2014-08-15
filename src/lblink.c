@@ -310,7 +310,7 @@ static int lfun_setRGB(lua_State *L)
 
   int result = blink1_setRGB(bd->device, r, g, b);
 
-  if (BLINK1_ERR != result) {
+  if (result != BLINK1_ERR) {
     lua_pushboolean(L, 1);
     return 1;
   } else {
@@ -371,7 +371,7 @@ static int lfun_fadeToRGB(lua_State *L)
 
   int result = blink1_fadeToRGBN(bd->device, millis, r, g, b, nLed);
 
-  if (BLINK1_ERR != result) {
+  if (result != BLINK1_ERR) {
     lua_pushboolean(L, 1);
     return 1;
   } else {
@@ -403,7 +403,7 @@ static int lfun_readRGB(lua_State *L)
 
   int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, nLed);
 
-  if (BLINK1_ERR != result) {
+  if (result != BLINK1_ERR) {
     lua_pushinteger(L, r);
     lua_pushinteger(L, g);
     lua_pushinteger(L, b);
@@ -424,13 +424,13 @@ static int lfun_readRGB(lua_State *L)
 static int lfun_play(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
-  int startpos = luaL_optint(L, 2, 0);
-  int endpos = luaL_optint(L, 3, 0);
-  int count = luaL_optint(L, 4, 0);
+  uint8_t startpos = luaL_optint(L, 2, 0);
+  uint8_t endpos = luaL_optint(L, 3, 0);
+  uint8_t count = luaL_optint(L, 4, 0);
 
   int result = blink1_playloop(bd->device, PATTERNPLAY_START, startpos, endpos, count);
 
-  if (BLINK1_ERR != result) {
+  if (result != BLINK1_ERR) {
     lua_pushboolean(L, 1);
     return 1;
   } else {
@@ -451,7 +451,7 @@ static int lfun_stop(lua_State *L)
 
   int result = blink1_playloop(bd->device, PATTERNPLAY_STOP, 0, 0, 0);
 
-  if (BLINK1_ERR != result) {
+  if (result != BLINK1_ERR) {
     lua_pushboolean(L, 1);
     return 1;
   } else {
@@ -479,7 +479,7 @@ static int lfun_readplay(lua_State *L)
   int result = blink1_readPlayState(bd->device, &playing, &playstart,
                                     &playend, &playcount, &playpos);
 
-  if (BLINK1_ERR != result) {
+  if (result != BLINK1_ERR) {
     lua_pushboolean(L, playing);
     lua_pushinteger(L, playstart);
     lua_pushinteger(L, playend);
