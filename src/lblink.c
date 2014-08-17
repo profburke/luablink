@@ -5,11 +5,6 @@
  *
  * NOTE: This library only implements the Mk 2 versions of the various functions.
  *
- * NOTE: Most of the Blink1 library functions _claim_ to return -1 on error, and 0 on
- *       success. This doesn't seem to be true. As best I can tell, the do all return -1
- *       on error; but my testing shows most (I didn't test all) of the functions are returning
- *       9 on success...
- *
  * @module lblink
  * @author Matthew M. Burke <matthew@bluedino.net>
  * @copyright 2014 BlueDino Software
@@ -53,6 +48,21 @@ typedef struct blinker {
 
 
 
+/*
+ * NOTE: Most of the Blink1 library functions _claim_ to return -1 on error, and 0 on
+ *       success. This doesn't seem to be true. As best I can tell, they do all return -1
+ *       on error; but testing (on OS X 10.9.4) shows most (I didn't test all) of the functions
+ *       return 9 on success.
+ *
+ *       On a related note, given the way the blink1 and hid code is written, it is not currently
+ *       possible to retrieve meaningul error codes/messages on error. So we are left knowing
+ *       only that an error occured. It's not clear to me that knowing more specifics would be
+ *       useful, however.
+ *
+ */
+
+
+
 
 /************************************************************************************
  *
@@ -75,10 +85,7 @@ static int lfun_enumerate(lua_State *L)
 
 
 
-/*** Returns a table describing all attached devices.
- * Note there's a mis-match between the device IDs and the
- * table indices since tables are 1-based (by default) and
- * the device IDs are 0-based.
+/*** Returns a table with descriptions of all attached devices.
  *
  * @function list
  * @treturn table each entry describes an attached device
@@ -93,7 +100,7 @@ static int lfun_list(lua_State *L)
 
   for (int i = 0; i < nDevices; i++) {
 
-    // push int to index into list
+    // push (list) index for the row we're creating
     lua_pushinteger(L, i + 1);
 
     lua_createtable(L, 0, 3);
@@ -127,8 +134,8 @@ static int lfun_list(lua_State *L)
  *
  * Otherwise it attempts to bind to the specified device. A particular device is specified
  * either by an integer ID or a string of 8 hexadecimal characters.
- * The integer ID must be between 0 and n-1 (where n is the number of attached devices).
- * The hex string is the serial number of a particular device.
+ * The integer ID must be between <code>0</code> and <code>n-1</code> (<em>where n is the number of 
+ * attached devices</em>). The hex string is the serial number of a particular device.
  *
  * @function open
  * @tparam[opt] ?string|int devspec device ID or serial number
@@ -236,7 +243,7 @@ static int lfun_close(lua_State *L)
  * The version number is returned as a scaled integer,
  * e.g. "v1.1" -> 101
  *
- * @function fwversion
+ * @function version
  * @treturn int firmware version number
  *
  */
@@ -275,7 +282,7 @@ static int lfun_serialNumber(lua_State *L)
 /*** Returns true/false if the device is/isn't a Mark 2.
  *
  * @function isMk2
- * @treturn boolean true if device is Mark2, false otherwise
+ * @treturn boolean true if device is Mark 2, false otherwise
  *
  */
 static int lfun_isMk2(lua_State *L)
@@ -292,6 +299,9 @@ static int lfun_isMk2(lua_State *L)
 /*** Sets the device to the given RGB.
  *
  * @function set
+ * @tparam int r &mdash; red value in range [0-255]
+ * @tparam int g &mdash; green value in range [0-255]
+ * @tparam int b &mdash; blue value in range [0-255]
  *
  */
 static int lfun_setRGB(lua_State *L)
@@ -334,11 +344,11 @@ static int lfun_setRGB(lua_State *L)
   }
 
 
-/// Turns the blink(1) on (displaying white)
+/// Turns the device on. Equivalent to <code>set(255, 255, 255)</code>
 // @function on
 SET(On, 255, 255, 255)
 
-/// Turns the blink(1) off
+/// Turns the device off. Equivalent to <code>set(0, 0, 0)</code>
 // @function off
 SET(Off, 0, 0, 0)
 
@@ -500,9 +510,24 @@ static int lfun_readplay(lua_State *L)
 // @function writepatternline
 static int lfun_writePatternLine(lua_State *L)
 {
-  lua_pushnil(L);
-  lua_pushstring(L, "TBD");
-  return 2;
+  blinker *bd = lua_touserdata(L, 1);
+  uint16_t millis = luaL_checkint(L, 2);
+  uint8_t r = luaL_checkint(L, 3);
+  uint8_t g = luaL_checkint(L, 4);
+  uint8_t b = luaL_checkint(L, 5);
+  uint8_t pos = luaL_checkint(L, 6);
+
+  int result = blink1_writePatternLine(bd->device, millis, r, g, b, pos);
+
+  if (result != BLINK1_ERR) {
+    lua_pushboolean(L, 1);
+    return 1;
+  } else {
+    lua_pushnil(L);
+    // TODO: add pos to error message
+    lua_pushstring(L, "Could not write pattern line");
+    return 2;
+  }
 }
 
 
@@ -512,9 +537,29 @@ static int lfun_writePatternLine(lua_State *L)
 // @function readpatternline
 static int lfun_readPatternLine(lua_State *L)
 {
-  lua_pushnil(L);
-  lua_pushstring(L, "TBD");
-  return 2;
+  blinker *bd = lua_touserdata(L, 1);
+  uint8_t pos = luaL_checkint(L, 2);
+
+  uint16_t millis;
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+
+  int result = blink1_readPatternLine(bd->device, &millis, &r, &g, &b, pos);
+
+  if (result != BLINK1_ERR) {
+    lua_pushinteger(L, pos);
+    lua_pushinteger(L, millis);
+    lua_pushinteger(L, r);
+    lua_pushinteger(L, g);
+    lua_pushinteger(L, b);
+    return 5;
+  } else {
+    lua_pushnil(L);
+    // TODO: add pos to error message
+    lua_pushstring(L, "Could not read pattern line");
+    return 2;
+  }
 }
 
 
@@ -524,9 +569,18 @@ static int lfun_readPatternLine(lua_State *L)
 // @function savepattern
 static int lfun_savePattern(lua_State *L)
 {
-  lua_pushnil(L);
-  lua_pushstring(L, "TBD");
-  return 2;
+  blinker *bd = lua_touserdata(L, 1);
+
+  int result = blink1_savePattern(bd->device);
+
+  if (result != BLINK1_ERR) {
+    lua_pushboolean(L, 1);
+    return 1;
+  } else {
+    lua_pushnil(L);
+    lua_pushstring(L, "Error saving pattern.");
+    return 2;
+  }
 }
 
 
@@ -545,7 +599,7 @@ static int lfun_savePattern(lua_State *L)
  *
  */
 static const luaL_Reg lblink_methods[] = {
-  {"fwversion", lfun_firmwareVersion},
+  {"version", lfun_firmwareVersion},
   {"serial", lfun_serialNumber},
   {"isMk2", lfun_isMk2},
 
