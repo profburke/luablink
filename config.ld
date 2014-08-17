@@ -1,7 +1,6 @@
 -- ldoc configuration
 title = 'lblink docs'
 project = 'lblink'
--- file = { 'e1.lua', 'e2.lua'}
 -- style = true
 -- template = false
 examples = { 'examples' }
