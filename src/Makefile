@@ -1,8 +1,8 @@
 
 
 
-blink: lblink.c
-	gcc -DUSE_HIDAPI -bundle -undefined dynamic_lookup -o lblink.so lblink.c -lBlink1
+blink: blink.c
+	gcc -DUSE_HIDAPI -bundle -undefined dynamic_lookup -I/usr/local/include -L/usr/local/lib -o blink.so blink.c -lBlink1
 
 
 clean:

@@ -23,7 +23,7 @@ extern const char * LUABLINK_VERSION;
 /*-------------------------------------------------------------------------*\
 * Initializes the library.
 \*-------------------------------------------------------------------------*/
-LUABLINK_API int luaopen_lblink(lua_State *L);
+LUABLINK_API int luaopen_blink(lua_State *L);
 
 
 #endif /* LUABLINK_H */

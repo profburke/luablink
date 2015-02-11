@@ -17,7 +17,7 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "blink1-lib.h"
-#include "lblink.h"
+#include "blink.h"
 
 #define BLINK1_ERR (-1)
 #define PATTERNPLAY_START 1
@@ -354,14 +354,40 @@ SET(On, 255, 255, 255)
 // @function off
 SET(Off, 0, 0, 0)
 
+/// Turns the device off. Equivalent to <code>set(0, 0, 0)</code>
+// @function black
 SET(Black, 0, 0, 0)
+
+/// Turns the device on. Equivalent to <code>set(255, 255, 255)</code>
+// @function white
 SET(White, 255, 255, 255)
+
+/// Turns the device red. Equivalent to <code>set(255, 0, 0)</code>
+// @function red
 SET(Red, 255, 0, 0)
+
+/// Turns the device green. Equivalent to <code>set(0, 255, 0)</code>
+// @function green
 SET(Green, 0, 255, 0)
+
+/// Turns the device blue. Equivalent to <code>set(0, 0, 255)</code>
+// @function blue
 SET(Blue, 0, 0, 255)
+
+/// Turns the device cyan. Equivalent to <code>set(0, 255, 255)</code>
+// @function cyan
 SET(Cyan, 0, 255, 255)
+
+/// Turns the device magenta. Equivalent to <code>set(255, 0, 255)</code>
+// @function magenta
 SET(Magenta, 255, 0, 255)
+
+/// Turns the device yellow. Equivalent to <code>set(255, 255, 0)</code>
+// @function yellow
 SET(Yellow, 255, 255, 0)
+
+/// Turns the device orange. Equivalent to <code>set(255, 165, 0)</code>
+// @function orange
 SET(Orange, 255, 165, 0)
 
 
@@ -677,7 +703,7 @@ static const luaL_Reg lblink_functions[] = {
  * - create and populate the library table
  *
  */
-LUABLINK_API int luaopen_lblink(lua_State *L)
+LUABLINK_API int luaopen_blink(lua_State *L)
 {
   luaL_newmetatable(L, BLINK_TYPENAME);
 
