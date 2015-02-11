@@ -5,9 +5,9 @@
  *
  * NOTE: This library only implements the Mk 2 versions of the various functions.
  *
- * @module lblink
+ * @module blink
  * @author Matthew M. Burke <matthew@bluedino.net>
- * @copyright 2014 BlueDino Software
+ * @copyright 2014-2015 BlueDino Software
  * @license MIT License (see LICENSE file)
  *
  */
@@ -55,7 +55,7 @@ typedef struct blinker {
  *       return 9 on success.
  *
  *       On a related note, given the way the blink1 and hid code is written, it is not currently
- *       possible to retrieve meaningul error codes/messages on error. So we are left knowing
+ *       possible to retrieve meaningful error codes/messages on error. So we are left knowing
  *       only that an error occured. It's not clear to me that knowing more specifics would be
  *       useful, however.
  *
@@ -247,7 +247,7 @@ static int lfun_tostring(lua_State *L)
   if (bd->device == NULL) {
     lua_pushstring(L, "blink(1): disconnected");
   } else {
-    /// @fixme getSerialForDev can return NULL
+    // @fixme getSerialForDev can return NULL
     const char *serial = blink1_getSerialForDev(bd->device);
     lua_pushfstring(L, "blink(1): [%s]", serial);
   }
@@ -414,7 +414,11 @@ SET(Orange, 255, 165, 0)
 /*** Fades device to given RGB over given number of milliseconds.
  *
  * @function fade
- *
+ * @int millis the fade duration
+ * @int red the red component [0-255]
+ * @int green the green component [0-255]
+ * @int blue the blue component [0-255]
+ * @int n which LED to adjust; 0 - both; 1 - top; 2 - bottom
  */
 static int lfun_fadeToRGB(lua_State *L)
 {
