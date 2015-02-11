@@ -1,7 +1,9 @@
 -- ldoc configuration
-title = 'lblink docs'
-project = 'lblink'
+title = 'blink Documentation'
+project = 'blink'
+description = 'A simple binding to the blink(1) by ThingM'
 -- style = true
 -- template = false
-examples = { 'examples' }
+readme = {'README.md', 'CHANGELOG.md'}
+examples =  'examples' 
 
