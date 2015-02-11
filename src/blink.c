@@ -240,6 +240,24 @@ static int lfun_close(lua_State *L)
 
 
 
+static int lfun_tostring(lua_State *L)
+{
+  blinker *bd = lua_touserdata(L, 1);
+  
+  if (bd->device == NULL) {
+    lua_pushstring(L, "blink(1): disconnected");
+  } else {
+    /// @fixme getSerialForDev can return NULL
+    const char *serial = blink1_getSerialForDev(bd->device);
+    lua_pushfstring(L, "blink(1): [%s]", serial);
+  }
+
+  return 1;
+}
+
+
+
+
 /*** Returns the firmware version of the device.
  * The version number is returned as a scaled integer,
  * e.g. "v1.1" -> 101
@@ -670,6 +688,7 @@ static const luaL_Reg lblink_methods[] = {
 
   {"close", lfun_close},
   {"__gc", lfun_close},
+  {"__tostring", lfun_tostring},
   {NULL, NULL}
 };
 
