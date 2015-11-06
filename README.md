@@ -1,7 +1,7 @@
 
 # Blink
 
-ThingM's blink(1) is a programmable status indiator that plugs into a USB port. This library allows you to control a blink(1) via Lua code.
+ThingM's [blink(1)](https://blink1.thingm.com/) is a programmable status indiator that plugs into a USB port. This library allows you to control a blink(1) via Lua code.
 
 
 ## Usage
@@ -29,7 +29,7 @@ However,
 
 ## Documentation and Contact Information
 
-More documentation be found in the `doc` subdirectory. The best way to contact me regarding this library is to post an issue at the [github repository](https://github.com/profburke/???/issues).
+More documentation be found in the `doc` subdirectory. The best way to contact me regarding this library is to post an issue at the [github repository](https://github.com/profburke/luablink/issues).
 
 
 ## License
