@@ -22,9 +22,7 @@ The library was developed and tested using [Lua](http://lua.org) 5.2.3. However 
 
 It does depend on the Blink1 library (available from ...). Currently the makefile assumes Blink1 is already built and available. Future versions of the build process will handle downloading, building and installing this library as needed.
 
-The easiest way to build and install is to use [luarocks](http://luarocks.org).
-
-However,
+*TODO*: installation instructions and a rockspec for LuaRocks.
 
 
 ## Documentation and Contact Information
