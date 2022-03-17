@@ -205,7 +205,7 @@ static int lfun_open(lua_State *L)
 static int lfun_sleep(lua_State *L)
 {
   // TODO: validate millis
-  int millis = luaL_optint(L, 1, DEFAULT_PAUSE);
+  int millis = luaL_optinteger(L, 1, DEFAULT_PAUSE);
   blink1_sleep(millis);
   return 0;
 }
@@ -428,7 +428,7 @@ static int lfun_fadeToRGB(lua_State *L)
   int r = lua_tointeger(L, 3);
   int g = lua_tointeger(L, 4);
   int b = lua_tointeger(L, 5);
-  int nLed = luaL_optint(L, 6, 0);
+  int nLed = luaL_optinteger(L, 6, 0);
 
   int result = blink1_fadeToRGBN(bd->device, millis, r, g, b, nLed);
 
@@ -459,7 +459,7 @@ static int lfun_readRGB(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
   // TODO: validate nLed
-  int nLed = luaL_optint(L, 2, 0);
+  int nLed = luaL_optinteger(L, 2, 0);
 
   uint16_t millis;
   uint8_t r, g, b;
@@ -489,9 +489,9 @@ static int lfun_play(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
   // TODO: validate startpos, endpos, count
-  uint8_t startpos = luaL_optint(L, 2, 0);
-  uint8_t endpos = luaL_optint(L, 3, 0);
-  uint8_t count = luaL_optint(L, 4, 0);
+  uint8_t startpos = luaL_optinteger(L, 2, 0);
+  uint8_t endpos = luaL_optinteger(L, 3, 0);
+  uint8_t count = luaL_optinteger(L, 4, 0);
 
   int result = blink1_playloop(bd->device, PATTERNPLAY_START, startpos, endpos, count);
 
@@ -570,11 +570,11 @@ static int lfun_writePatternLine(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
   // TODO: validate millis, r, g, b, pos
-  uint16_t millis = luaL_checkint(L, 2);
-  uint8_t r = luaL_checkint(L, 3);
-  uint8_t g = luaL_checkint(L, 4);
-  uint8_t b = luaL_checkint(L, 5);
-  uint8_t pos = luaL_checkint(L, 6);
+  uint16_t millis = luaL_checkinteger(L, 2);
+  uint8_t r = luaL_checkinteger(L, 3);
+  uint8_t g = luaL_checkinteger(L, 4);
+  uint8_t b = luaL_checkinteger(L, 5);
+  uint8_t pos = luaL_checkinteger(L, 6);
 
   int result = blink1_writePatternLine(bd->device, millis, r, g, b, pos);
 
@@ -599,7 +599,7 @@ static int lfun_readPatternLine(lua_State *L)
 {
   blinker *bd = lua_touserdata(L, 1);
   // TODO: validate pos
-  uint8_t pos = luaL_checkint(L, 2);
+  uint8_t pos = luaL_checkinteger(L, 2);
 
   uint16_t millis;
   uint8_t r;
