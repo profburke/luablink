@@ -8,27 +8,51 @@ ThingM's [blink(1)](https://blink1.thingm.com/) is a programmable status indicat
 
 If you just want a pretty light, it's as simple as:
 
+```lua
     blink = require 'blink'
     d = blink.open()
     d:set(255, 123, 147)
+```
 
+A slightly more extensive example to toggle the blink between red and blue:
 
+```lua
+    local blink = require 'blink'
 
-This project uses semantic versioning. See <a href="http://semver.org">semver.org</a> for more information.
+    local function doit(d, reps, time)
+      time = time or 300
+      for i = 1,reps do
+        d:red(); blink.sleep(time); d:blue(); blink.sleep(time);
+       end
+       d:off()
+    end
 
+    local d = blink.open()
+
+    if d then
+      doit(d, 4)
+    end
+```
+              
 ## Requirements and Installation
 
-The library was developed and tested using [Lua](http://lua.org) 5.2.3. However it should run on other versions of Lua with little or no modification. **As of March 2022**, it has been updated to work with Lua 5.4.2.
+**As of March 2022**, it has been updated to work with Lua 5.4.2.
 
-It does depend on the [Blink1 command line tool](https://github.com/todbot/blink1/blob/master/docs/blink1-tool.md). Currently the makefile assumes Blink1 is already built and available. Future versions of the build process will handle downloading, building and installing this library as needed.
+The library was developed and tested using [Lua](http://lua.org) 5.2.3. However it should run on other versions of Lua with little or no modification. 
 
-*TODO*: installation instructions and a rockspec for LuaRocks.
+It does depend on the Blink1 [command line tool](https://github.com/todbot/blink1/blob/master/docs/blink1-tool.md). Currently the makefile assumes this is already built and, specifically, that the include and dynamic library files are available in `/usr/local/include` and `/usr/local/lib` respectively. Future versions of the build process will handle downloading, building and installing this library as needed.
 
+## Documentation
 
-## Documentation and Contact Information
+This project uses semantic versioning. See <a href="http://semver.org">semver.org</a> for more information. See the [Changelog](https://github.com/profburke/luablink/blob/master/CHANGELOG.md) for a summary of the project's evolution. Check the [TODO](https://github.com/profburke/luablink/blob/master/TODO.md) for a list or possible/planned improvements.
 
-More documentation be found in the `doc` subdirectory. The best way to contact me regarding this library is to post an issue at the [github repository](https://github.com/profburke/luablink/issues).
+API documentation be found in the `doc` subdirectory, the project uses [ldoc](https://stevedonovan.github.io/ldoc/) to generate the documentation.
 
+## Contributions and Contact Information
+
+**Help and contributions are encouraged and greatly appreciated!** 
+
+Code changes, documentation improvement, more examples, ..., a cool logo&mdash;there are a wide range of ways you can contribute. The best way to contact me regarding this library is to post an issue at the [github repository](https://github.com/profburke/luablink/issues).
 
 ## License
 
