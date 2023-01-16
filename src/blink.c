@@ -1,13 +1,13 @@
 /*** Lua binding to the Blink1 library.
  *
- * The main function in this library allows you to create Lua object bound to a blink(1) 
- * so you can control it with Lua code.
+ * The main function in this library allows you to create a Lua object bound to a
+ * blink(1) so you can control it with Lua code.
  *
  * NOTE: This library only implements the Mk 2 versions of the various functions.
  *
  * @module blink
  * @author Matthew M. Burke <matthew@bluedino.net>
- * @copyright 2014-2015 BlueDino Software
+ * @copyright 2014-2023 BlueDino Software
  * @license MIT License (see LICENSE file)
  *
  */
@@ -45,9 +45,6 @@ typedef struct blinker {
   blink1_device *device;
 } blinker;
 
-
-
-
 /*
  * NOTE: Most of the Blink1 library functions _claim_ to return -1 on error, and 0 on
  *       success. This doesn't seem to be true. As best I can tell, they do all return -1
@@ -60,9 +57,6 @@ typedef struct blinker {
  *       useful, however.
  *
  */
-
-
-
 
 /************************************************************************************
  *
@@ -81,9 +75,6 @@ static int lfun_enumerate(lua_State *L)
   lua_pushnumber(L, blink1_enumerate());
   return 1;
 }
-
-
-
 
 /*** Returns a table with descriptions of all attached devices.
  *
@@ -123,9 +114,6 @@ static int lfun_list(lua_State *L)
 
   return 1;
 }
-
-
-
 
 /*** Opens a blink(1) device.
  *
@@ -192,9 +180,6 @@ static int lfun_open(lua_State *L)
   return 1;
 }
 
-
-
-
 /*** Platform-independent millisecond-resolution sleep.
  *
  * @function sleep
@@ -210,11 +195,7 @@ static int lfun_sleep(lua_State *L)
   return 0;
 }
 
-
-
-
 /****************************************************************************/
-
 
 /*** The Blink(1) device class.
  *
@@ -229,7 +210,7 @@ static int lfun_sleep(lua_State *L)
  */
 static int lfun_close(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   blink1_setRGB(bd->device, 0, 0, 0);
   blink1_close(bd->device);
   bd->device = NULL;
@@ -237,12 +218,9 @@ static int lfun_close(lua_State *L)
   return 0;
 }
 
-
-
-
 static int lfun_tostring(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   
   if (bd->device == NULL) {
     lua_pushstring(L, "blink(1): disconnected");
@@ -255,9 +233,6 @@ static int lfun_tostring(lua_State *L)
   return 1;
 }
 
-
-
-
 /*** Returns the firmware version of the device.
  * The version number is returned as a scaled integer,
  * e.g. "v1.1" -> 101
@@ -268,7 +243,7 @@ static int lfun_tostring(lua_State *L)
  */
 static int lfun_firmwareVersion(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   // @fixme -- seems to always return an int, even on error
   //           can we test and see if there's a distinguished error value we
   //           can check for?
@@ -276,9 +251,6 @@ static int lfun_firmwareVersion(lua_State *L)
 
   return 1;
 }
-
-
-
 
 /*** Returns the serial number of the device.
  *
@@ -288,15 +260,12 @@ static int lfun_firmwareVersion(lua_State *L)
  */
 static int lfun_serialNumber(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   // @fixme getSerialForDev can return NULL
   lua_pushstring(L, blink1_getSerialForDev(bd->device));
 
   return 1;
 }
-
-
-
 
 /*** Returns true/false if the device is/isn't a Mark 2.
  *
@@ -306,14 +275,11 @@ static int lfun_serialNumber(lua_State *L)
  */
 static int lfun_isMk2(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   lua_pushboolean(L, blink1_isMk2(bd->device));
 
   return 1;
 }
-
-
-
 
 /*** Sets the device to the given RGB.
  *
@@ -325,17 +291,18 @@ static int lfun_isMk2(lua_State *L)
  */
 static int lfun_setRGB(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
-  int r = lua_tointeger(L, 2);
-  int g = lua_tointeger(L, 3);
-  int b = lua_tointeger(L, 4);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
+  int r = luaL_checkinteger(L, 2);
+  int g = luaL_checkinteger(L, 3);
+  int b = luaL_checkinteger(L, 4);
+  
   luaL_argcheck(L, ( r > -1 && r < 256), 2, 
-                "red value must be in range [0, 255]");
+                "Red value must be in range [0, 255].");
   luaL_argcheck(L, ( g > -1 && g < 256), 3, 
-                "green value must be in range [0, 255]");
+                "Green value must be in range [0, 255].");
   luaL_argcheck(L, ( b > -1 && b < 256), 4, 
-                "blue value must be in range [0, 255]");
+                "Blue value must be in range [0, 255].");
 
   int result = blink1_setRGB(bd->device, r, g, b);
 
@@ -350,9 +317,6 @@ static int lfun_setRGB(lua_State *L)
   }
 }
 
-
-
-
 #define SET(Color, r, g, b) \
   static int lfun_set##Color(lua_State *L) \
   { \
@@ -362,7 +326,6 @@ static int lfun_setRGB(lua_State *L)
     lua_pushinteger(L, (b)); \
     return lfun_setRGB(L);   \
   }
-
 
 /// Turns the device on. Equivalent to <code>set(255, 255, 255)</code>
 // @function on
@@ -408,9 +371,6 @@ SET(Yellow, 255, 255, 0)
 // @function orange
 SET(Orange, 255, 165, 0)
 
-
-
-
 /*** Fades device to given RGB over given number of milliseconds.
  *
  * @function fade
@@ -422,7 +382,7 @@ SET(Orange, 255, 165, 0)
  */
 static int lfun_fadeToRGB(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   // TODO: validate millis, r, g, b, nLed
   int millis = lua_tointeger(L, 2);
   int r = lua_tointeger(L, 3);
@@ -443,9 +403,6 @@ static int lfun_fadeToRGB(lua_State *L)
   }
 }
 
-
-
-
 /*** Returns the last RGB value for the given device.
  *
  * @function read
@@ -457,7 +414,7 @@ static int lfun_fadeToRGB(lua_State *L)
  */
 static int lfun_readRGB(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   // TODO: validate nLed
   int nLed = luaL_optinteger(L, 2, 0);
 
@@ -480,14 +437,11 @@ static int lfun_readRGB(lua_State *L)
   }
 }
 
-
-
-
 /// Plays the current pattern.
 // @function play
 static int lfun_play(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   // TODO: validate startpos, endpos, count
   uint8_t startpos = luaL_optinteger(L, 2, 0);
   uint8_t endpos = luaL_optinteger(L, 3, 0);
@@ -506,14 +460,11 @@ static int lfun_play(lua_State *L)
   }
 }
 
-
-
-
 /// Stops playing the current pattern.
 // @function stop
 static int lfun_stop(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
   int result = blink1_playloop(bd->device, PATTERNPLAY_STOP, 0, 0, 0);
 
@@ -528,14 +479,11 @@ static int lfun_stop(lua_State *L)
   }
 }
 
-
-
-
 /// Retrieves information on current play state.
 // @function readplay
 static int lfun_readplay(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
   uint8_t playing;
   uint8_t playstart;
@@ -561,14 +509,11 @@ static int lfun_readplay(lua_State *L)
   }
 }
 
-
-
-
 /// Write ...
 // @function writepatternline
 static int lfun_writePatternLine(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   // TODO: validate millis, r, g, b, pos
   uint16_t millis = luaL_checkinteger(L, 2);
   uint8_t r = luaL_checkinteger(L, 3);
@@ -590,14 +535,12 @@ static int lfun_writePatternLine(lua_State *L)
   }
 }
 
-
-
-
 /// Read ...
 // @function readpatternline
 static int lfun_readPatternLine(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+  
   // TODO: validate pos
   uint8_t pos = luaL_checkinteger(L, 2);
 
@@ -624,15 +567,14 @@ static int lfun_readPatternLine(lua_State *L)
   }
 }
 
-
-
-
 /// Save ...
 // @function savepattern
 static int lfun_savePattern(lua_State *L)
 {
-  blinker *bd = lua_touserdata(L, 1);
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
+  // TODO: check udata
+  
   int result = blink1_savePattern(bd->device);
 
   if (result != BLINK1_ERR) {
@@ -646,15 +588,11 @@ static int lfun_savePattern(lua_State *L)
   }
 }
 
-
-
-
 /************************************************************************************
  *
  * Library Declaration
  *
  ************************************************************************************/
-
 
 /*
  *
@@ -696,9 +634,6 @@ static const luaL_Reg lblink_methods[] = {
   {NULL, NULL}
 };
 
-
-
-
 /*
  *
  * List of library functions. We also set a few data values
@@ -712,9 +647,6 @@ static const luaL_Reg lblink_functions[] = {
   {"sleep", lfun_sleep},
   {NULL, NULL}
 };
-
-
-
 
 /*
  *

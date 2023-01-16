@@ -9,8 +9,7 @@
 #include "lua.h"
 
 extern const char * LUABLINK_VERSION;
-#define LUABLINK_COPYRIGHT "Copyright (C) 2014 Matthew M. Burke"
-
+#define LUABLINK_COPYRIGHT "Copyright (C) 2014-2023 Bluedino Software"
 
 /*-------------------------------------------------------------------------*\
 * This macro prefixes all exported API functions
@@ -19,12 +18,10 @@ extern const char * LUABLINK_VERSION;
 #define LUABLINK_API extern
 #endif
 
-
 /*-------------------------------------------------------------------------*\
 * Initializes the library.
 \*-------------------------------------------------------------------------*/
 LUABLINK_API int luaopen_blink(lua_State *L);
-
 
 #endif /* LUABLINK_H */
 
