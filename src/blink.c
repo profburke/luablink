@@ -721,14 +721,14 @@ static const luaL_Reg lblink_functions[] = {
  *
  */
 LUABLINK_API int luaopen_blink(lua_State *L) {
+  // configure metatable for blinks
   luaL_newmetatable(L, BLINK_TYPENAME);
-
-  lua_pushstring(L, "__index");
-  lua_pushvalue(L, -2);
-  lua_settable(L, -3);
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -2, "__index");
 
   luaL_setfuncs(L, lblink_methods, 0);
-  // should we now drop the metatable?
+
+  // configure library table
   luaL_newlib(L, lblink_functions);
 
   lua_pushnumber(L, blink1_vid());
