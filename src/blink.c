@@ -13,6 +13,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -70,9 +71,9 @@ typedef struct blinker {
  * @treturn int number of attached devices
  *
  */
-static int lfun_enumerate(lua_State *L)
-{
-  lua_pushnumber(L, blink1_enumerate());
+static int lfun_enumerate(lua_State *L) {
+  lua_pushinteger(L, blink1_enumerate());
+
   return 1;
 }
 
@@ -82,15 +83,11 @@ static int lfun_enumerate(lua_State *L)
  * @treturn table each entry describes an attached device
  *
  */
-static int lfun_list(lua_State *L)
-{
-  char buf[256];
-
+static int lfun_list(lua_State *L) {
   int nDevices = blink1_enumerate();
   lua_createtable(L, nDevices, 0);
 
   for (int i = 0; i < nDevices; i++) {
-
     // push (list) index for the row we're creating
     lua_pushinteger(L, i + 1);
 
@@ -131,8 +128,7 @@ static int lfun_list(lua_State *L)
  * @raise error if TBD
  *
  */
-static int lfun_open(lua_State *L)
-{
+static int lfun_open(lua_State *L) {
   int devid = -1;
   char serial[9] = {'\0', '\0', '\0', 
                     '\0', '\0', '\0',
@@ -154,7 +150,10 @@ static int lfun_open(lua_State *L)
       strncpy(serial, lua_tostring(L, 1), 8);
     }
   } else {
-    return luaL_argerror(L, 1, BADDEVSPEC_MSG);
+    lua_pushnil(L);
+    lua_pushstring(L, BADDEVSPEC_MSG);
+    
+    return 2;
   }
 
   blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
@@ -166,6 +165,7 @@ static int lfun_open(lua_State *L)
     b->device = blink1_openBySerial(serial);
   }
 
+  // TODO: free the memory of the new userdata ??
   if (b->device == NULL) {
     if (devid > -1) {
       return luaL_error(L, IDOPENERR_MSG, devid);
@@ -187,13 +187,27 @@ static int lfun_open(lua_State *L)
  * specified, defaults to 100
  *
  */
-static int lfun_sleep(lua_State *L)
-{
-  // TODO: validate millis
+static int lfun_sleep(lua_State *L) {
   int millis = luaL_optinteger(L, 1, DEFAULT_PAUSE);
+  luaL_argcheck(L, (millis >= 0), 1, "Millis must be >= 0.");
   blink1_sleep(millis);
+  
   return 0;
 }
+
+/// Add comment
+// @function enableDegamma
+static int lfun_enableDegamma(lua_State *L) {
+  if (lua_toboolean(L, 1)) {
+    blink1_enableDegamma();
+  } else {
+    blink1_disableDegamma();
+  }
+  
+  return 0;
+}
+
+// wrap blink1_degamma(int n)?
 
 /****************************************************************************/
 
@@ -208,8 +222,7 @@ static int lfun_sleep(lua_State *L)
  * @function close
  *
  */
-static int lfun_close(lua_State *L)
-{
+static int lfun_close(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   blink1_setRGB(bd->device, 0, 0, 0);
   blink1_close(bd->device);
@@ -218,15 +231,16 @@ static int lfun_close(lua_State *L)
   return 0;
 }
 
-static int lfun_tostring(lua_State *L)
-{
+static int lfun_tostring(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   
   if (bd->device == NULL) {
     lua_pushstring(L, "blink(1): disconnected");
   } else {
-    // @fixme getSerialForDev can return NULL
     const char *serial = blink1_getSerialForDev(bd->device);
+    if (serial == NULL) {
+      serial = "N/A";
+    }
     lua_pushfstring(L, "blink(1): [%s]", serial);
   }
 
@@ -244,6 +258,8 @@ static int lfun_tostring(lua_State *L)
 static int lfun_firmwareVersion(lua_State *L)
 {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+  // I don't know what the following comment means.
+  // Also, should we return a string (e.g. 1.1) instead of an int?
   // @fixme -- seems to always return an int, even on error
   //           can we test and see if there's a distinguished error value we
   //           can check for?
@@ -261,8 +277,12 @@ static int lfun_firmwareVersion(lua_State *L)
 static int lfun_serialNumber(lua_State *L)
 {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // @fixme getSerialForDev can return NULL
-  lua_pushstring(L, blink1_getSerialForDev(bd->device));
+  const char *serial = blink1_getSerialForDev(bd->device);
+  // TODO: remove duplication with tostring
+  if (serial == NULL) {
+    serial = "N/A";
+  }
+  lua_pushstring(L, serial);
 
   return 1;
 }
@@ -297,12 +317,9 @@ static int lfun_setRGB(lua_State *L)
   int g = luaL_checkinteger(L, 3);
   int b = luaL_checkinteger(L, 4);
   
-  luaL_argcheck(L, ( r > -1 && r < 256), 2, 
-                "Red value must be in range [0, 255].");
-  luaL_argcheck(L, ( g > -1 && g < 256), 3, 
-                "Green value must be in range [0, 255].");
-  luaL_argcheck(L, ( b > -1 && b < 256), 4, 
-                "Blue value must be in range [0, 255].");
+  luaL_argcheck(L, ( r > -1 && r < 256), 2, "Red value must be in range [0, 255].");
+  luaL_argcheck(L, ( g > -1 && g < 256), 3, "Green value must be in range [0, 255].");
+  luaL_argcheck(L, ( b > -1 && b < 256), 4, "Blue value must be in range [0, 255].");
 
   int result = blink1_setRGB(bd->device, r, g, b);
 
@@ -311,7 +328,6 @@ static int lfun_setRGB(lua_State *L)
     return 1;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     lua_pushstring(L, "Could not set RGB");
     return 2;
   }
@@ -371,6 +387,36 @@ SET(Yellow, 255, 255, 0)
 // @function orange
 SET(Orange, 255, 165, 0)
 
+// TODO: need to specify which LED
+static int lfun_dim(lua_State *L) {
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+  // read r, g, b
+  uint16_t millis;
+  uint8_t r, g, b;
+
+  int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, 0);
+  printf("%d\n", result);
+  
+  if (result == BLINK1_ERR) {
+    // TODO: some sort of error handling
+    return 0;
+  }
+
+  printf("%d, %d, %d\n", r, g, b);
+  // set to 1/2 [buckets?]
+  uint8_t nr = floor(r/2.0);
+  uint8_t ng = floor(g/2.0);
+  uint8_t nb = floor(b/2.0);
+  printf("%d, %d, %d\n", nr, ng, nb);
+  result = blink1_setRGB(bd->device, nr, ng, nb);
+  
+  return 0; // or return T/F?
+}
+  
+static int lfun_brighten(lua_State *L) {
+  return 0;
+}
+
 /*** Fades device to given RGB over given number of milliseconds.
  *
  * @function fade
@@ -383,22 +429,25 @@ SET(Orange, 255, 165, 0)
 static int lfun_fadeToRGB(lua_State *L)
 {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // TODO: validate millis, r, g, b, nLed
-  int millis = lua_tointeger(L, 2);
-  int r = lua_tointeger(L, 3);
-  int g = lua_tointeger(L, 4);
-  int b = lua_tointeger(L, 5);
+  int millis = luaL_checkinteger(L, 2);
+  int r = luaL_checkinteger(L, 3);
+  int g = luaL_checkinteger(L, 4);
+  int b = luaL_checkinteger(L, 5);
   int nLed = luaL_optinteger(L, 6, 0);
 
   int result = blink1_fadeToRGBN(bd->device, millis, r, g, b, nLed);
 
   if (result != BLINK1_ERR) {
     lua_pushboolean(L, 1);
+
     return 1;
   } else {
+    char msg[256];
+    sprintf(msg, "Could not fade to (%d, %d, %d)", r, g, b);
+
     lua_pushnil(L);
-    // TODO: move error message to define
-    lua_pushstring(L, "Could not fade to ....");
+    lua_pushstring(L, msg);
+
     return 2;
   }
 }
@@ -415,9 +464,10 @@ static int lfun_fadeToRGB(lua_State *L)
 static int lfun_readRGB(lua_State *L)
 {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // TODO: validate nLed
   int nLed = luaL_optinteger(L, 2, 0);
-
+  // TODO: is it 0|1 or 1|2 ?
+  // luaL_argcheck(L, (nLed == 0 || nLed == 1), 1, "Led # must be 0 or 1.");
+  
   uint16_t millis;
   uint8_t r, g, b;
 
@@ -431,7 +481,6 @@ static int lfun_readRGB(lua_State *L)
     return 4;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     lua_pushstring(L, "could not retrieve rgb");
     return 2;
   }
@@ -454,7 +503,6 @@ static int lfun_play(lua_State *L)
     return 1;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     lua_pushstring(L, "Error starting play.");
     return 2;
   }
@@ -473,7 +521,6 @@ static int lfun_stop(lua_State *L)
     return 1;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     lua_pushstring(L, "Error stopping play.");
     return 2;
   }
@@ -503,7 +550,6 @@ static int lfun_readplay(lua_State *L)
     return 5;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     lua_pushstring(L, "Could not retrieve playstate.");
     return 2;
   }
@@ -528,7 +574,6 @@ static int lfun_writePatternLine(lua_State *L)
     return 1;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     // TODO: add pos to error message
     lua_pushstring(L, "Could not write pattern line");
     return 2;
@@ -560,7 +605,6 @@ static int lfun_readPatternLine(lua_State *L)
     return 5;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     // TODO: add pos to error message
     lua_pushstring(L, "Could not read pattern line");
     return 2;
@@ -572,8 +616,6 @@ static int lfun_readPatternLine(lua_State *L)
 static int lfun_savePattern(lua_State *L)
 {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-
-  // TODO: check udata
   
   int result = blink1_savePattern(bd->device);
 
@@ -582,7 +624,6 @@ static int lfun_savePattern(lua_State *L)
     return 1;
   } else {
     lua_pushnil(L);
-    // TODO: move error message to define
     lua_pushstring(L, "Error saving pattern.");
     return 2;
   }
@@ -618,6 +659,9 @@ static const luaL_Reg lblink_methods[] = {
   {"yellow", lfun_setYellow},
   {"orange", lfun_setOrange},
   {"fade", lfun_fadeToRGB}, 
+  {"dim", lfun_dim},
+  {"brighten", lfun_brighten},
+  
   {"read", lfun_readRGB}, 
 
   {"play", lfun_play},
@@ -645,6 +689,7 @@ static const luaL_Reg lblink_functions[] = {
   {"list", lfun_list}, 
   {"open", lfun_open},
   {"sleep", lfun_sleep},
+  {"enableDegamma", lfun_enableDegamma},
   {NULL, NULL}
 };
 
