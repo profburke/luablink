@@ -136,13 +136,16 @@ static int lfun_open(lua_State *L) {
 
   int nDevices = blink1_enumerate();
   if (0 == nDevices) {
-    return luaL_error(L, NODEV_MSG);
+    lua_pushnil(L);
+    lua_pushstring(L, NODEV_MSG);
+
+    return 2;
   }
 
   // @fixme I'm still not happy with the parameter validation
   if (0 == lua_gettop(L)) {
     devid = 0;
-  } else if (lua_isnumber(L, 1)) {
+  } else if (lua_isinteger(L, 1)) {
     int argval = lua_tointeger(L, 1);
     if ( (-1 < argval) && (argval < nDevices) ) {
       devid = argval;
@@ -156,7 +159,7 @@ static int lfun_open(lua_State *L) {
     return 2;
   }
 
-  blinker *b = (blinker *)lua_newuserdata(L, sizeof(blinker));
+  blinker *b = (blinker *)lua_newuserdatauv(L, sizeof(blinker), 0);
   b->device = NULL;
 
   if (devid > -1) {
@@ -167,11 +170,14 @@ static int lfun_open(lua_State *L) {
 
   // TODO: free the memory of the new userdata ??
   if (b->device == NULL) {
+    lua_pushnil(L);
     if (devid > -1) {
-      return luaL_error(L, IDOPENERR_MSG, devid);
+      lua_pushstring(L, IDOPENERR_MSG);
     } else {
-      return luaL_error(L, SERIALOPENERR_MSG, serial);
+      lua_pushstring(L, SERIALOPENERR_MSG);
     }
+
+    return 2;
   }
 
   luaL_getmetatable(L, BLINK_TYPENAME);
@@ -390,30 +396,41 @@ SET(Orange, 255, 165, 0)
 // TODO: need to specify which LED
 static int lfun_dim(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // read r, g, b
   uint16_t millis;
   uint8_t r, g, b;
 
   int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, 0);
-  printf("%d\n", result);
   
   if (result == BLINK1_ERR) {
-    // TODO: some sort of error handling
     return 0;
   }
 
-  printf("%d, %d, %d\n", r, g, b);
-  // set to 1/2 [buckets?]
-  uint8_t nr = floor(r/2.0);
-  uint8_t ng = floor(g/2.0);
-  uint8_t nb = floor(b/2.0);
-  printf("%d, %d, %d\n", nr, ng, nb);
-  result = blink1_setRGB(bd->device, nr, ng, nb);
+  r = r - (r * 0.1);
+  g = g - (g * 0.1);
+  b = b - (b * 0.1);
+  result = blink1_setRGB(bd->device, r, g, b);
   
   return 0; // or return T/F?
 }
-  
+
+#define min(x, y) ( ((x) < (y)) ? (x) : (y) )
+
 static int lfun_brighten(lua_State *L) {
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+  uint16_t millis;
+  uint8_t r, g, b;
+
+  int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, 0);
+
+  if (result == BLINK1_ERR) {
+    return 0;
+  }
+
+  r = min(r + (r * 0.1), 255);
+  g = min(g + (g * 0.1), 255);
+  b = min(b + (b * 0.1), 255);
+  result = blink1_setRGB(bd->device, r, g, b);
+
   return 0;
 }
 
@@ -703,8 +720,7 @@ static const luaL_Reg lblink_functions[] = {
  * - create and populate the library table
  *
  */
-LUABLINK_API int luaopen_blink(lua_State *L)
-{
+LUABLINK_API int luaopen_blink(lua_State *L) {
   luaL_newmetatable(L, BLINK_TYPENAME);
 
   lua_pushstring(L, "__index");
