@@ -1,7 +1,7 @@
 /*** Lua binding to the Blink1 library.
  *
- * The main function in this library allows you to create a Lua object bound to a
- * blink(1) so you can control it with Lua code.
+ * Control blink(1) objects with Lua code.
+ * (https://blink1.thingm.com/)
  *
  * NOTE: This library only implements the Mk 2 versions of the various functions.
  *
@@ -25,11 +25,18 @@
 #define PATTERNPLAY_STOP 0
 
 // @fixme why are these #defineS and the others are static constS?
-#define BADDEVSPEC_MSG "Must be either an integer in [0, n-1] (where n is the number of attached devices) or a valid serial number."
-#define BADDEVID_MSG "ID must be in [0,n-1] where n is the number of attached devices."
+#define BADDEVSPEC_MSG "ID must be either an integer in [0, n-1] (n = number of attached blinks) or a valid serial number."
+#define BADDEVID_MSG "ID must be in [0,n-1] (n = number of attached blinks)."
 #define NODEV_MSG "No blink(1) devices attached."
 #define IDOPENERR_MSG "Could not open blink(1) with id %d."
 #define SERIALOPENERR_MSG "Could not open blink(1) with serial #%s."
+#define BADSLEEPTIME_MSG "millis must be >= 0"
+#define BADRED_MSG "red value must be in range [0, 255]"
+#define BADGREEN_MSG "green value must be in range [0, 255]"
+#define BADBLUE_MSG "blue value must be in range [0, 255]"
+#define DISCONNECTED_BLINK_MSG "blink(1): disconnected"
+#define BLINK_STRING_FMT "[blink(1) %s: #%s]"
+#define BAD_RETRIEVAL_MSG "could not retrieve rgb"
 
 static const char *BLINK_TYPENAME = "net.bluedino.Blink1";
 static const char *VID_KEY = "VID";
@@ -40,7 +47,7 @@ static const char *SERIALNUM_KEY = "serial";
 static const char *MARK_KEY = "mark";
 static const int DEFAULT_PAUSE = 100;
 
-const char *LUABLINK_VERSION = "0.6.1";
+const char *LUABLINK_VERSION = "0.7.0";
 
 typedef struct blinker {
   blink1_device *device;
@@ -64,6 +71,30 @@ typedef struct blinker {
  * Functions
  *
  ************************************************************************************/
+
+/*** Returns ThingM's Vendor ID.
+ *
+ * @function vid
+ * @treturn int ThingM's Vendor ID.
+ *
+ */
+static int lfun_vid(lua_State *L) {
+  lua_pushinteger(L, blink1_vid());
+  
+  return 1;
+}
+
+/*** Returns the blink(1) Product ID.
+ *
+ * @function pid
+ * @treturn int blink(1) Product ID.
+ *
+ */
+static int lfun_pid(lua_State *L) {
+  lua_pushinteger(L, blink1_pid());
+  
+  return 1;
+}
 
 /*** Returns count of attached blink(1) devices.
  *
@@ -102,7 +133,7 @@ static int lfun_list(lua_State *L) {
     lua_settable(L, -3);
 
     lua_pushstring(L, MARK_KEY);
-    lua_pushinteger(L, (blink1_isMk2ById(i)?2:1) );
+    lua_pushinteger(L, blink1_deviceTypeById(i));
     lua_settable(L, -3);
 
     // now put row into list
@@ -114,35 +145,30 @@ static int lfun_list(lua_State *L) {
 
 /*** Opens a blink(1) device.
  *
- * Create a userdata bound to a particular device. If this function
- * is called without a parameter, it returns a userdata bound to the first device it finds.
+ * Create a userdata bound to a specified blink(1). If this function is called without a parameter,
+ * it returns a userdata bound to the first blink(1) it finds.
  *
  * Otherwise it attempts to bind to the specified device. A particular device is specified
- * either by an integer ID or a string of 8 hexadecimal characters.
- * The integer ID must be between <code>0</code> and <code>n-1</code> (<em>where n is the number of 
- * attached devices</em>). The hex string is the serial number of a particular device.
+ * either by an integer ID or a string of 8 hexadecimal characters. The integer ID must be between
+ * <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>). The hex string
+ * is the serial number of a particular device.
  *
  * @function open
  * @tparam[opt] ?string|int devspec device ID or serial number
- * @treturn userdata object bound to a device
+ * @treturn userdata object bound to the specified device
  * @raise error if TBD
  *
  */
 static int lfun_open(lua_State *L) {
   int devid = -1;
-  char serial[9] = {'\0', '\0', '\0', 
-                    '\0', '\0', '\0',
-                    '\0', '\0', '\0'};
+  char serial[9] = {'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
 
   int nDevices = blink1_enumerate();
   if (0 == nDevices) {
-    lua_pushnil(L);
-    lua_pushstring(L, NODEV_MSG);
-
-    return 2;
+    return luaL_error(L, NODEV_MSG);
   }
 
-  // @fixme I'm still not happy with the parameter validation
+  // @fixme - not happy with this; clean it up and rethink
   if (0 == lua_gettop(L)) {
     devid = 0;
   } else if (lua_isinteger(L, 1)) {
@@ -150,16 +176,21 @@ static int lfun_open(lua_State *L) {
     if ( (-1 < argval) && (argval < nDevices) ) {
       devid = argval;
     } else {
-      strncpy(serial, lua_tostring(L, 1), 8);
+      sprintf(serial, "%X", argval);
+    }
+  } else if (lua_isstring(L, 1)) {
+    int isint;
+    devid = lua_tointegerx(L, 1, &isint);
+    if (!isint) {
+      return luaL_error(L, BADDEVSPEC_MSG);
     }
   } else {
-    lua_pushnil(L);
-    lua_pushstring(L, BADDEVSPEC_MSG);
-    
-    return 2;
+    return luaL_error(L, BADDEVSPEC_MSG);
   }
 
   blinker *b = (blinker *)lua_newuserdatauv(L, sizeof(blinker), 0);
+  // No need to check that b is not null: if memory allocation failed,
+  // we'd never return to here because the allocator throws an error.
   b->device = NULL;
 
   if (devid > -1) {
@@ -168,21 +199,21 @@ static int lfun_open(lua_State *L) {
     b->device = blink1_openBySerial(serial);
   }
 
-  // TODO: free the memory of the new userdata ??
+  // I _think_ the userdata will be garbage collected since it doesn't get assigned.
   if (b->device == NULL) {
-    lua_pushnil(L);
+    char msg[100];
     if (devid > -1) {
-      lua_pushstring(L, IDOPENERR_MSG);
+      sprintf(msg, IDOPENERR_MSG, devid);
     } else {
-      lua_pushstring(L, SERIALOPENERR_MSG);
+      sprintf(msg, SERIALOPENERR_MSG, serial);
     }
 
-    return 2;
+    return luaL_error(L, msg);
   }
 
   luaL_getmetatable(L, BLINK_TYPENAME);
   lua_setmetatable(L, -2);
-  
+
   return 1;
 }
 
@@ -195,25 +226,48 @@ static int lfun_open(lua_State *L) {
  */
 static int lfun_sleep(lua_State *L) {
   int millis = luaL_optinteger(L, 1, DEFAULT_PAUSE);
-  luaL_argcheck(L, (millis >= 0), 1, "Millis must be >= 0.");
+  luaL_argcheck(L, (millis >= 0), 1, BADSLEEPTIME_MSG);
   blink1_sleep(millis);
   
   return 0;
 }
 
-/// Add comment
-// @function enableDegamma
-static int lfun_enableDegamma(lua_State *L) {
-  if (lua_toboolean(L, 1)) {
-    blink1_enableDegamma();
-  } else {
-    blink1_disableDegamma();
-  }
-  
+/*** Disables gamma correction.
+ *
+ * @function noGamma
+ *
+ */
+static int lfun_noDegamma(lua_State *L) {
+  blink1_disableDegamma();
+
   return 0;
 }
 
-// wrap blink1_degamma(int n)?
+/*** Enables gamma correction.
+ *
+ * @function gamma
+ *
+ */
+static int lfun_yesDegamma(lua_State *L) {
+  blink1_enableDegamma();
+
+  return 0;
+}
+
+// blink1_enable_degamma is static so can't access ...
+// need to think of another approach...
+//
+// /*** Returns a boolean indicating whether gamma correction is enabled.
+//  *
+//  * @function gamma
+//  * @treturn boolean true if gamma correction is enabled.
+//  *
+//  */
+// static int lfun_isDegamma(lua_State *L) {
+//   lua_pushboolean(L, blink1_enable_degamma);
+  
+//   return 1;
+// }
 
 /****************************************************************************/
 
@@ -237,39 +291,48 @@ static int lfun_close(lua_State *L) {
   return 0;
 }
 
+static const char *getSerial(lua_State *L,blink1_device *device) {
+  const char *serial = blink1_getSerialForDev(device);
+  if (serial == NULL) {
+    serial = "N/A";
+  }
+  lua_pushfstring(L, BLINK_STRING_FMT, serial);
+
+  return serial;
+}
+
 static int lfun_tostring(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   
   if (bd->device == NULL) {
-    lua_pushstring(L, "blink(1): disconnected");
+    lua_pushstring(L, DISCONNECTED_BLINK_MSG);
   } else {
-    const char *serial = blink1_getSerialForDev(bd->device);
-    if (serial == NULL) {
-      serial = "N/A";
-    }
-    lua_pushfstring(L, "blink(1): [%s]", serial);
+    lua_pushfstring(L, BLINK_STRING_FMT,
+                    blink1_deviceTypeToStr(blink1_deviceType(bd->device)),
+                    getSerial(L, bd->device));
   }
 
   return 1;
 }
 
 /*** Returns the firmware version of the device.
- * The version number is returned as a scaled integer,
- * e.g. "v1.1" -> 101
  *
  * @function version
- * @treturn int firmware version number
+ * @treturn string firmware version number
  *
  */
-static int lfun_firmwareVersion(lua_State *L)
-{
+static int lfun_firmwareVersion(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // I don't know what the following comment means.
-  // Also, should we return a string (e.g. 1.1) instead of an int?
-  // @fixme -- seems to always return an int, even on error
-  //           can we test and see if there's a distinguished error value we
-  //           can check for?
-  lua_pushinteger(L, blink1_getVersion(bd->device));
+  // According to comments in C code, it seems that blink1_getVersion
+  // _can_ return an error code, but what those error codes are is not
+  // documented.
+  int scaledVersion = blink1_getVersion(bd->device);
+  int major = scaledVersion / 100;
+  int minor = scaledVersion % 100;
+
+  char buf[20];
+  sprintf(buf, "%d%02d", major, minor);
+  lua_pushstring(L, buf);
 
   return 1;
 }
@@ -280,15 +343,9 @@ static int lfun_firmwareVersion(lua_State *L)
  * @treturn string serial number
  *
  */
-static int lfun_serialNumber(lua_State *L)
-{
+static int lfun_serialNumber(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  const char *serial = blink1_getSerialForDev(bd->device);
-  // TODO: remove duplication with tostring
-  if (serial == NULL) {
-    serial = "N/A";
-  }
-  lua_pushstring(L, serial);
+  lua_pushstring(L, getSerial(L, bd->device));
 
   return 1;
 }
@@ -299,14 +356,29 @@ static int lfun_serialNumber(lua_State *L)
  * @treturn boolean true if device is Mark 2, false otherwise
  *
  */
-static int lfun_isMk2(lua_State *L)
-{
+static int lfun_isMk2(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   lua_pushboolean(L, blink1_isMk2(bd->device));
 
   return 1;
 }
 
+/*** Returns an integer indicating the version of the blink(1).
+ *
+ * @function type
+ * @treturn in the version of the device
+ *
+ */
+static int lfun_type(lua_State *L) {
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+  lua_pushinteger(L, blink1_deviceType(bd->device));
+
+  return 1;
+}
+
+// TODO: type as string function
+
+// TODO: document return value
 /*** Sets the device to the given RGB.
  *
  * @function set
@@ -315,17 +387,16 @@ static int lfun_isMk2(lua_State *L)
  * @tparam int b &mdash; blue value in range [0-255]
  *
  */
-static int lfun_setRGB(lua_State *L)
-{
+static int lfun_setRGB(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
   int r = luaL_checkinteger(L, 2);
   int g = luaL_checkinteger(L, 3);
   int b = luaL_checkinteger(L, 4);
   
-  luaL_argcheck(L, ( r > -1 && r < 256), 2, "Red value must be in range [0, 255].");
-  luaL_argcheck(L, ( g > -1 && g < 256), 3, "Green value must be in range [0, 255].");
-  luaL_argcheck(L, ( b > -1 && b < 256), 4, "Blue value must be in range [0, 255].");
+  luaL_argcheck(L, ( -1 < r && r < 256), 2, BADRED_MSG);
+  luaL_argcheck(L, ( -1 < g && g < 256), 3, BADGREEN_MSG);
+  luaL_argcheck(L, ( -1 < b && b < 256), 4, BADBLUE_MSG);
 
   int result = blink1_setRGB(bd->device, r, g, b);
 
@@ -340,8 +411,7 @@ static int lfun_setRGB(lua_State *L)
 }
 
 #define SET(Color, r, g, b) \
-  static int lfun_set##Color(lua_State *L) \
-  { \
+  static int lfun_set##Color(lua_State *L) { \
     lua_settop(L, 1);        \
     lua_pushinteger(L, (r)); \
     lua_pushinteger(L, (g)); \
@@ -393,7 +463,17 @@ SET(Yellow, 255, 255, 0)
 // @function orange
 SET(Orange, 255, 165, 0)
 
-// TODO: need to specify which LED
+#define max(x, y) ( ((x) < (y)) ? (y) : (x) )
+
+// TODO: need to specify which LED?
+/*** Dims the color displayed by the device. Note: calling this function
+ * forces Gamma correction off. You will need to explicitly turn it back on if
+ * you want it afterwards.
+ *
+ * @function dim
+ * @tresult boolean ...
+ *
+ */
 static int lfun_dim(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   uint16_t millis;
@@ -402,19 +482,44 @@ static int lfun_dim(lua_State *L) {
   int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, 0);
   
   if (result == BLINK1_ERR) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "could not dim");
+    return 2;
   }
 
-  r = r - (r * 0.1);
-  g = g - (g * 0.1);
-  b = b - (b * 0.1);
+  // We're going to force gamma correction off (and leave it off
+  // since we can't (yet) check to see if it was on
+  // Then we consider the range 0-255 broken up into 8 buckets,
+  // and move to the next lower bucket (i.e. subtract 256/8)/
+
+  blink1_disableDegamma();
+  
+  r = max(0, r - 32);
+  g = max(0, g - 32);
+  b = max(0, b - 32);
   result = blink1_setRGB(bd->device, r, g, b);
   
-  return 0; // or return T/F?
+  if (result != BLINK1_ERR) {
+    lua_pushboolean(L, 1);
+    return 1;
+  } else {
+    lua_pushnil(L);
+    lua_pushstring(L, "could not dim");
+    return 2;
+  }
 }
 
 #define min(x, y) ( ((x) < (y)) ? (x) : (y) )
 
+// TODO: need to specify which LED?
+/*** Brightens the color displayed by the device. Note: calling this function
+ * forces Gamma correction off. You will need to explicitly turn it back on if
+ * you want it afterwards.
+ *
+ * @function brighten
+ * @tresult boolean ...
+ *
+ */
 static int lfun_brighten(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   uint16_t millis;
@@ -423,15 +528,27 @@ static int lfun_brighten(lua_State *L) {
   int result = blink1_readRGB(bd->device, &millis, &r, &g, &b, 0);
 
   if (result == BLINK1_ERR) {
-    return 0;
+    lua_pushnil(L);
+    lua_pushstring(L, "could not read RGB values");
+    return 2;
   }
 
-  r = min(r + (r * 0.1), 255);
-  g = min(g + (g * 0.1), 255);
-  b = min(b + (b * 0.1), 255);
+  // Do the opposite of dim...
+  blink1_disableDegamma();
+
+  if (r != 0) { r = min(255, r + 32); }
+  if (g != 0) { g = min(255, g + 32); }
+  if (b != 0) { b = min(255, b + 32); }
   result = blink1_setRGB(bd->device, r, g, b);
 
-  return 0;
+  if (result != BLINK1_ERR) {
+    lua_pushboolean(L, 1);
+    return 1;
+  } else {
+    lua_pushnil(L);
+    lua_pushstring(L, "could not brighten");
+    return 2;
+  }
 }
 
 /*** Fades device to given RGB over given number of milliseconds.
@@ -443,8 +560,7 @@ static int lfun_brighten(lua_State *L) {
  * @int blue the blue component [0-255]
  * @int n which LED to adjust; 0 - both; 1 - top; 2 - bottom
  */
-static int lfun_fadeToRGB(lua_State *L)
-{
+static int lfun_fadeToRGB(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   int millis = luaL_checkinteger(L, 2);
   int r = luaL_checkinteger(L, 3);
@@ -469,17 +585,18 @@ static int lfun_fadeToRGB(lua_State *L)
   }
 }
 
+// TODO: deal with specifying which LED
+// TODO: do we really need millis?
 /*** Returns the last RGB value for the given device.
  *
- * @function read
+ * @function get
  * @treturn int last set red value [0, 255]
  * @treturn int last set green value [0, 255]
  * @treturn int last set blue value [0, 255]
  * @treturn int last set millis value
  *
  */
-static int lfun_readRGB(lua_State *L)
-{
+static int lfun_readRGB(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   int nLed = luaL_optinteger(L, 2, 0);
   // TODO: is it 0|1 or 1|2 ?
@@ -498,21 +615,30 @@ static int lfun_readRGB(lua_State *L)
     return 4;
   } else {
     lua_pushnil(L);
-    lua_pushstring(L, "could not retrieve rgb");
+    lua_pushstring(L, BAD_RETRIEVAL_MSG);
     return 2;
   }
 }
 
-/// Plays the current pattern.
-// @function play
-static int lfun_play(lua_State *L)
-{
+/*** Plays the current pattern. Optionally specify a sub-range to play, as
+ * well as an optional count (0 = loop forever).
+ *
+ * @function play
+ *
+ */
+static int lfun_play(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // TODO: validate startpos, endpos, count
-  uint8_t startpos = luaL_optinteger(L, 2, 0);
-  uint8_t endpos = luaL_optinteger(L, 3, 0);
-  uint8_t count = luaL_optinteger(L, 4, 0);
 
+  int startpos = luaL_optinteger(L, 2, 0);
+  int endpos = luaL_optinteger(L, 3, 0);
+  int count = luaL_optinteger(L, 4, 0);
+
+  // TODO: adjust upper bound based on whether mk1, mk2, etc.
+  luaL_argcheck(L, ( -1 < startpos && startpos < 33), 2, "starting position must be in range [0, 32]");
+  luaL_argcheck(L, ( -1 < endpos && endpos < 33), 3, "ending position must be in range [0, 32]");
+  luaL_argcheck(L, ( startpos <= endpos ), 2, "start position must be before end position");
+  luaL_argcheck(L, ( count > -1), 4, "count must be non-negative");
+  
   int result = blink1_playloop(bd->device, PATTERNPLAY_START, startpos, endpos, count);
 
   if (result != BLINK1_ERR) {
@@ -520,15 +646,17 @@ static int lfun_play(lua_State *L)
     return 1;
   } else {
     lua_pushnil(L);
-    lua_pushstring(L, "Error starting play.");
+    lua_pushstring(L, "error starting play.");
     return 2;
   }
 }
 
-/// Stops playing the current pattern.
-// @function stop
-static int lfun_stop(lua_State *L)
-{
+/*** Stops playing the current pattern.
+ *
+ * @function stop
+ *
+ */
+static int lfun_stop(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
   int result = blink1_playloop(bd->device, PATTERNPLAY_STOP, 0, 0, 0);
@@ -543,10 +671,15 @@ static int lfun_stop(lua_State *L)
   }
 }
 
-/// Retrieves information on current play state.
-// @function readplay
-static int lfun_readplay(lua_State *L)
-{
+// NOTE: playcount counts down to 0 -- unless it started at 0
+// TODO: document the return value(s).
+// TODO: maybe return as a table instead ?
+/*** Retrieves information on current play state.
+ *
+ * @function readplay
+ *
+*/
+static int lfun_readplay(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
   uint8_t playing;
@@ -567,22 +700,32 @@ static int lfun_readplay(lua_State *L)
     return 5;
   } else {
     lua_pushnil(L);
-    lua_pushstring(L, "Could not retrieve playstate.");
+    lua_pushstring(L, "could not retrieve playstate");
     return 2;
   }
 }
 
-/// Write ...
-// @function writepatternline
-static int lfun_writePatternLine(lua_State *L)
-{
+/*** Write pattern description for specified position.
+ *
+ * @function writepatternline
+ *
+ */
+static int lfun_writePatternLine(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
-  // TODO: validate millis, r, g, b, pos
-  uint16_t millis = luaL_checkinteger(L, 2);
-  uint8_t r = luaL_checkinteger(L, 3);
-  uint8_t g = luaL_checkinteger(L, 4);
-  uint8_t b = luaL_checkinteger(L, 5);
-  uint8_t pos = luaL_checkinteger(L, 6);
+
+  int millis = luaL_checkinteger(L, 2);
+  int r = luaL_checkinteger(L, 3);
+  int g = luaL_checkinteger(L, 4);
+  int b = luaL_checkinteger(L, 5);
+  int pos = luaL_checkinteger(L, 6);
+
+  luaL_argcheck(L, ( -1 < millis && millis < 32768), 2, "milliseconds must be in range [0, 32768]");
+  luaL_argcheck(L, ( -1 < r && r < 256), 3, BADRED_MSG);
+  luaL_argcheck(L, ( -1 < g && g < 256), 4, BADGREEN_MSG);
+  luaL_argcheck(L, ( -1 < b && b < 256), 5, BADBLUE_MSG);
+  // TODO: make upper bound dependent on whether it's a mk2, etc
+  luaL_argcheck(L, ( -1 < pos && pos < 33 ), 6, "position must be in range [0, 32]");
+
 
   int result = blink1_writePatternLine(bd->device, millis, r, g, b, pos);
 
@@ -597,14 +740,18 @@ static int lfun_writePatternLine(lua_State *L)
   }
 }
 
-/// Read ...
-// @function readpatternline
-static int lfun_readPatternLine(lua_State *L)
-{
+// TODO: return value as table?
+/*** Read pattern description at specified position.
+ *
+ * @function readpatternline
+ *
+ */
+static int lfun_readPatternLine(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   
-  // TODO: validate pos
-  uint8_t pos = luaL_checkinteger(L, 2);
+  int pos = luaL_checkinteger(L, 2);
+  // TODO: make upper bound dependent on whether it's a mk2, etc
+  luaL_argcheck(L, ( -1 < pos && pos < 33), 2, "position must be in range [0, 32]");
 
   uint16_t millis;
   uint8_t r;
@@ -628,10 +775,12 @@ static int lfun_readPatternLine(lua_State *L)
   }
 }
 
-/// Save ...
-// @function savepattern
-static int lfun_savePattern(lua_State *L)
-{
+/*** Saves pattern from RAM into flash.
+ *
+ * @function savepattern
+ *
+ */
+static int lfun_savePattern(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   
   int result = blink1_savePattern(bd->device);
@@ -654,59 +803,60 @@ static int lfun_savePattern(lua_State *L)
 
 /*
  *
- * List of members on blink objects.
+ * List of methods to install in the Blink metatable.
  *
  */
 static const luaL_Reg lblink_methods[] = {
-  {"version", lfun_firmwareVersion},
-  {"serial", lfun_serialNumber},
   {"isMk2", lfun_isMk2},
+  {"serial", lfun_serialNumber},
+  {"type", lfun_type},
+  {"version", lfun_firmwareVersion},
 
-  {"set", lfun_setRGB},
-  // Is there a way to get these generated by the SET macro?
-  {"on", lfun_setOn},
-  {"off", lfun_setOff},
   {"black", lfun_setBlack},
-  {"white", lfun_setWhite},
-  {"red", lfun_setRed},
-  {"green", lfun_setGreen},
   {"blue", lfun_setBlue},
-  {"cyan", lfun_setCyan},
-  {"magenta", lfun_setMagenta},
-  {"yellow", lfun_setYellow},
-  {"orange", lfun_setOrange},
-  {"fade", lfun_fadeToRGB}, 
-  {"dim", lfun_dim},
   {"brighten", lfun_brighten},
+  {"dim", lfun_dim},
+  {"cyan", lfun_setCyan},
+  {"fade", lfun_fadeToRGB}, 
+  {"get", lfun_readRGB}, 
+  {"green", lfun_setGreen},
+  {"magenta", lfun_setMagenta},
+  {"off", lfun_setOff},
+  {"on", lfun_setOn},
+  {"orange", lfun_setOrange},
+  {"red", lfun_setRed},
+  {"set", lfun_setRGB},
+  {"white", lfun_setWhite},
+  {"yellow", lfun_setYellow},
   
-  {"read", lfun_readRGB}, 
-
   {"play", lfun_play},
-  {"stop", lfun_stop},
   {"readplay", lfun_readplay},
+  {"stop", lfun_stop},
 
-  {"writepatternline", lfun_writePatternLine},
   {"readpatternline", lfun_readPatternLine},
   {"savepattern", lfun_savePattern},
+  {"writepatternline", lfun_writePatternLine},
 
-  {"close", lfun_close},
   {"__gc", lfun_close},
   {"__tostring", lfun_tostring},
+  {"close", lfun_close},
   {NULL, NULL}
 };
 
 /*
  *
- * List of library functions. We also set a few data values
- * in the open function.
+ * List of functions to install in the library table.
  *
  */
 static const luaL_Reg lblink_functions[] = {
   {"enumerate", lfun_enumerate},
+  {"gamma", lfun_yesDegamma},
   {"list", lfun_list}, 
   {"open", lfun_open},
+  {"noGamma", lfun_noDegamma},
+  {"pid", lfun_pid},
   {"sleep", lfun_sleep},
-  {"enableDegamma", lfun_enableDegamma},
+  {"vid", lfun_vid},
   {NULL, NULL}
 };
 
@@ -721,14 +871,15 @@ static const luaL_Reg lblink_functions[] = {
  *
  */
 LUABLINK_API int luaopen_blink(lua_State *L) {
-  // configure metatable for blinks
+  // Blink metatable
   luaL_newmetatable(L, BLINK_TYPENAME);
+
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
 
   luaL_setfuncs(L, lblink_methods, 0);
 
-  // configure library table
+  // library table
   luaL_newlib(L, lblink_functions);
 
   lua_pushnumber(L, blink1_vid());
