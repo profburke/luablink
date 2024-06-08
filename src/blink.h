@@ -9,7 +9,7 @@
 #include "lua.h"
 
 extern const char * LUABLINK_VERSION;
-#define LUABLINK_COPYRIGHT "Copyright (C) 2014-2023 Bluedino Software"
+#define LUABLINK_COPYRIGHT "Copyright (C) 2014-2024 Bluedino Software"
 
 /*-------------------------------------------------------------------------*\
 * This macro prefixes all exported API functions

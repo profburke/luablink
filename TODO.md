@@ -10,3 +10,19 @@
 ### Completed Items
 - Methods should give errors when called on closed devices.
 
+- what about new functionality?
+- look at blink1-tool
+- look at python and other language libs
+
+- make decisions about #define vs static const
+- finish moving all (most) string literals
+
+### Unimplemented
+
+- clear pattern
+- servertickle
+- hsbtorgb (and vice versa?)
+- parsepattern (?)
+- set entire pattern (all 32 slots)  as string
+- get entire pattern (as string)
+
