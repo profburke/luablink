@@ -1,35 +1,36 @@
 /*** Lua binding to the Blink(1) library.
  *
- * The <a href="https://blink1.thingm.com/">blink(1)</a> is a small RGB LED light that plugs into a USB port and can be used
- * to indicate server status, receipt of new email, completion (<em>successful, hopefully</em>) of a compilation job, or almost
- * anything you can think to script. This library allows you to control these devices with Lua code.
+ * The <a href="https://blink1.thingm.com/">blink(1)</a> is a small RGB LED that plugs into a USB port and can be used
+ * to indicate server status, receipt of new email, completion (<em>successful, hopefully</em>) of a compilation job, or
+ * anything you might want to signal. This library allows you to control these devices with Lua.
  *
- * Objects of this class represent an attached blink(1). The object's metatable
+ * The library provides a function which creates objects that represent an attached blink(1). The object's metatable
  * contains all the functionality for manipulating the device (e.g. display a color, show
  * a pattern, etc).
  *
- * All of these functions should be invoked using Lua's colon notation
+ * This documentation uses the term <em>function</em> to refer to device-independent functionality and <em>method</em> to refer
+ * to functions provided by a blink(1) object's metatable, i.e. device <em>dependent</em> functionality. Functions should be invoked
+ * using dot notation, e.g.
  *
- * <code>device:function(arg)</code>
+ * <code>blink.enumerate()</code>
  *
- * If you want to use dot notation, you will have to repeat the device as the function's first
- * argument
+ * whereas methods should be invoked using colon notation, e.g.:
  *
- * <code>device.function(device, arg)</code>
+ * <code>device:set(r, g, b)</code>
  *
- * Otherwise the function will throw an error.
-*
+ * otherwise the method will throw an error.
  *
- * See the README file for installation instructions.
+ * See the <a href="topics/README.md.html">README</a> file for installation instructions.
  *
- * <strong>NOTE</strong>: This library only implements the Mk 2 versions of the various functions in the blink(1) API.
- * This code <em>should</em> work with Mk 3 devices, but probably isn't very useful for Mk 1. 
+ * <strong>NOTE</strong>: This library is primarily designed to work with Mk 2 versions of the blink(1). The code <em>should</em>
+ * work with Mk 3 devices (<em>although it does not implement Mk 3 functionality such as notes</em>); it
+ * probably isn't very useful for Mk 1 devices. 
  *
  * @module blink
  * @release 2.0.0
  * @author Matthew M. Burke <matthew@bluedino.net>
  * @copyright 2014-2024 BlueDino Software
- * @license MIT License (see LICENSE file)
+ * @license MIT License (see <a href="topics/LICENSE.html">LICENSE</a>)
  *
  */
 #include <stdio.h>
@@ -99,7 +100,7 @@ typedef struct blinker {
 //  *
 //  */
 
-/*** Returns count of attached blink(1) devices.
+/*** Returns the number of attached blink(1) devices.
  *
  * @function enumerate
  * @treturn int number of attached devices
@@ -112,8 +113,9 @@ static int lfun_enumerate(lua_State *L) {
 }
 
 /*** Enables gamma correction.
+ *
  * Gamma correction is enabled by default. See the source code
- * for the <code>blink1-tool</code> for details on how the gamma correction is
+ * for the <code>blink1-tool</code> for details on how gamma correction is
  * implemented.
  *
  * @function gamma
@@ -127,6 +129,7 @@ static int lfun_yesDegamma(lua_State *L) {
 }
 
 /*** Returns a table with descriptions of all attached devices.
+ *
  * Each entry is itself a table which describes a single device.
  *
  * The subtables have the following keys:
@@ -190,10 +193,10 @@ static int lfun_noDegamma(lua_State *L) {
  * either by an integer ID or a string of 8 hexadecimal characters. Integer IDs must be between
  * <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>).
  *
- * Hex strings are used to specify the serial number of a particular device. Serial numbers can be found using the
- * <code>list</code> function.
+ * Hex strings are used to specify the serial number of a particular device. Serial numbers of all attached devices
+ * can be found using the <code>list</code> function.
  *
- * The function will throw an error on Invalid arguments or issues opening the device. This error can be caught by
+ * The function will throw an error on invalid arguments or issues opening the device. This error can be caught by
  * wrapping the call in <code>pcall</code>.
  *
  * @function open
@@ -279,6 +282,7 @@ static int lfun_pid(lua_State *L) {
 }
 
 /*** Platform-independent, millisecond-resolution sleep.
+ *
  * This function is blocking.
  *
  * @function sleep
@@ -319,9 +323,7 @@ static int lfun_vid(lua_State *L) {
 
 /*** Lifecycle Methods
  *
- * The only method in this category...
- *
- * @section WTF
+ * @section Lifecycle
  *
  */
 
@@ -365,8 +367,6 @@ static int lfun_tostring(lua_State *L) {
 }
 
 /*** Informational Methods
- *
- * These methods relate to ...
  *
  * @section informational
  *
@@ -441,7 +441,7 @@ static int lfun_type(lua_State *L) {
 
 /*** Returns the version of the blink(1) as a string.
  *
- * This will be <code>mk1</code>, <code>mk2</code>, <code>mk3</code>, etc.
+ * This will be <code>mk1</code>, <code>mk2</code>, <code>mk3</code>.
  *
  * @function typestring
  * @treturn string the version of the device
@@ -454,27 +454,33 @@ static int lfun_typestring(lua_State *L) {
   return 1;
 }
 
+// /*** Color Methods.
+//  *
+//  * The <code>set</code> method will display the specified
+//  * RGB color on the device. This will set both of a Mark 2's LEDs
+//  * to the same color. If you only want to set one of the LEDs,
+//  * you need to use <code>fade</code>. The API does not have
+//  * a method to set just one of the LEDs on a Mark 2; you can fake it by using <code>fade</code>
+//  * with a very short duration.
+//  *
+//  * The color-specific methods, <code>black</code>,
+//  * <code>cyan</code>, <code>red</code>, etc. are implemented by
+//  * passing appropriate RGB values to <code>set</code>.
+//  *
+//  * <code>Get</code> method retrieves color information. Specifically, ...
+//  *
+//  * Dim and brighten...
+//  *
+//  * @section color
+//  *
+//  */
+
 /*** Color Methods.
- *
- * The <code>set</code> method will display the specified
- * RGB color on the device. This will set both of a Mark 2's LEDs
- * to the same color. If you only want to set one of the LEDs,
- * you need to use <code>fade</code>. The API does not have
- * a method to set just one of the LEDs on a Mark 2; you can fake it by using <code>fade</code>
- * with a very short duration.
- *
- * The color-specific methods, <code>black</code>,
- * <code>cyan</code>, <code>red</code>, etc. are implemented by
- * passing appropriate RGB values to <code>set</code>.
- *
- * <code>Get</code> method retrieves color information. Specifically, ...
- *
- * Dim and brighten...
  *
  * @section color
  *
  */
-
+ 
 /*** Sets the device to the given RGB value.
  *
  * @function set
@@ -568,7 +574,7 @@ SET(Yellow, 255, 255, 0)
  * you want it afterwards.
  *
  * @function dim
- * @treturn boolean ...
+ * @treturn boolean true if successful | false and an error description if not
  *
  */
 static int lfun_dim(lua_State *L) { 
@@ -614,7 +620,7 @@ static int lfun_dim(lua_State *L) {
  * you want it afterwards.
  *
  * @function brighten
- * @treturn boolean ...
+ * @treturn boolean true if successful | false and an error description if not
  *
  */
 static int lfun_brighten(lua_State *L) {

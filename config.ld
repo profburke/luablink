@@ -4,6 +4,6 @@ project = 'blink'
 description = 'A simple binding to the blink(1) by ThingM'
 -- style = true
 -- template = false
-readme = {'README.md', 'CHANGELOG.md'}
+readme = {'README.md', 'CHANGELOG.md', 'LICENSE'}
 examples =  'examples' 
 

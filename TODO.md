@@ -6,6 +6,7 @@
 - support setting only 1 of the LEDs; however this isn't supported by the blink library so we 
      need to think about how best to do this (possibly use fade w/a very short time)
 - {"serverdown", lfun_serverdown},
+- add "Release History" to README (see https://github.com/rgieseke/textui)
 
 ### Completed Items
 - Methods should give errors when called on closed devices.

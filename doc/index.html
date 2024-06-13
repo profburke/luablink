@@ -27,24 +27,29 @@
 <h1>blink</h1>
 
 
+
 <h2>Contents</h2>
 <ul>
 <li><a href="#Functions">Functions</a></li>
-<li><a href="#Class_Device">Class Device </a></li>
+<li><a href="#Lifecycle_Methods">Lifecycle Methods </a></li>
+<li><a href="#Informational_Methods">Informational Methods </a></li>
+<li><a href="#Color_Methods">Color Methods </a></li>
+<li><a href="#Pattern_Methods">Pattern Methods </a></li>
 </ul>
 
 
 <h2>Modules</h2>
-<ul class="$(kind=='Topics' and '' or 'nowrap'">
+<ul class="nowrap">
   <li><strong>blink</strong></li>
 </ul>
 <h2>Topics</h2>
-<ul class="$(kind=='Topics' and '' or 'nowrap'">
+<ul class="">
   <li><a href="topics/README.md.html">README</a></li>
   <li><a href="topics/CHANGELOG.md.html">CHANGELOG</a></li>
+  <li><a href="topics/LICENSE.html">LICENSE</a></li>
 </ul>
 <h2>Examples</h2>
-<ul class="$(kind=='Topics' and '' or 'nowrap'">
+<ul class="nowrap">
   <li><a href="examples/fader.lua.html">fader.lua</a></li>
   <li><a href="examples/toggle.lua.html">toggle.lua</a></li>
 </ul>
@@ -54,16 +59,31 @@
 <div id="content">
 
 <h1>Module <code>blink</code></h1>
-<p>Lua binding to the Blink1 library.</p>
+<p>Lua binding to the Blink(1) library.</p>
 <p>
-<p> The main function in this library allows you to create Lua object bound to a blink(1)
- so you can control it with Lua code.
-<p> NOTE: This library only implements the Mk 2 versions of the various functions.
+<p> The <a href="https://blink1.thingm.com/">blink(1)</a> is a small RGB LED that plugs into a USB port and can be used
+ to indicate server status, receipt of new email, completion (<em>successful, hopefully</em>) of a compilation job, or
+ anything you might want to signal. This library allows you to control these devices with Lua.
+<p> The library provides a function which creates objects that represent an attached blink(1). The object's metatable
+ contains all the functionality for manipulating the device (e.g. display a color, show
+ a pattern, etc).
+<p> This documentation uses the term <em>function</em> to refer to device-independent functionality and <em>method</em> to refer
+ to functions provided by a blink(1) object's metatable, i.e. device <em>dependent</em> functionality. Functions should be invoked
+ using dot notation, e.g.
+<p> <code>blink.enumerate()</code>
+<p> whereas methods should be invoked using colon notation, e.g.:
+<p> <code>device:set(r, g, b)</code>
+<p> otherwise the method will throw an error.
+<p> See the <a href="topics/README.md.html">README</a> file for installation instructions.
+<p> <strong>NOTE</strong>: This library is primarily designed to work with Mk 2 versions of the blink(1). The code <em>should</em>
+ work with Mk 3 devices (<em>although it does not implement Mk 3 functionality such as notes</em>); it
+ probably isn't very useful for Mk 1 devices.
 </p>
     <h3>Info:</h3>
     <ul>
-        <li><strong>Copyright</strong>: 2014-2015 BlueDino Software</li>
-        <li><strong>License</strong>: MIT License (see LICENSE file)</li>
+        <li><strong>Copyright</strong>: 2014-2024 BlueDino Software</li>
+        <li><strong>Release</strong>: 2.0.0</li>
+        <li><strong>License</strong>: MIT License (see <a href="topics/LICENSE.html">LICENSE</a>)</li>
         <li><strong>Author</strong>: Matthew M. Burke <matthew@bluedino.net></li>
     </ul>
 
@@ -72,118 +92,159 @@
 <table class="function_list">
 	<tr>
 	<td class="name" nowrap><a href="#enumerate">enumerate ()</a></td>
-	<td class="summary">Returns count of attached blink(1) devices.</td>
+	<td class="summary">Returns the number of attached blink(1) devices.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#gamma">gamma ()</a></td>
+	<td class="summary">Enables gamma correction.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#list">list ()</a></td>
 	<td class="summary">Returns a table with descriptions of all attached devices.</td>
 	</tr>
 	<tr>
+	<td class="name" nowrap><a href="#noGamma">noGamma ()</a></td>
+	<td class="summary">Disables gamma correction.</td>
+	</tr>
+	<tr>
 	<td class="name" nowrap><a href="#open">open ([devspec])</a></td>
 	<td class="summary">Opens a blink(1) device.</td>
 	</tr>
 	<tr>
+	<td class="name" nowrap><a href="#pid">pid ()</a></td>
+	<td class="summary">Returns the USB Product ID for the blink(1).</td>
+	</tr>
+	<tr>
 	<td class="name" nowrap><a href="#sleep">sleep ([millis])</a></td>
-	<td class="summary">Platform-independent millisecond-resolution sleep.</td>
+	<td class="summary">Platform-independent, millisecond-resolution sleep.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#vid">vid ()</a></td>
+	<td class="summary">Returns the USB vendor ID for ThingM.</td>
 	</tr>
 </table>
-<h2><a href="#Class_Device">Class Device </a></h2>
+<h2><a href="#Lifecycle_Methods">Lifecycle Methods </a></h2>
 <table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#Device:close">Device:close ()</a></td>
-	<td class="summary">Turns the device off, then closes it.</td>
+	<td class="name" nowrap><a href="#close">close ()</a></td>
+	<td class="summary">Turns the device off, then detaches it.</td>
 	</tr>
+</table>
+<h2><a href="#Informational_Methods">Informational Methods </a></h2>
+<table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#Device:version">Device:version ()</a></td>
+	<td class="name" nowrap><a href="#version">version ()</a></td>
 	<td class="summary">Returns the firmware version of the device.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:serial">Device:serial ()</a></td>
+	<td class="name" nowrap><a href="#serial">serial ()</a></td>
 	<td class="summary">Returns the serial number of the device.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:isMk2">Device:isMk2 ()</a></td>
+	<td class="name" nowrap><a href="#isMk2">isMk2 ()</a></td>
 	<td class="summary">Returns true/false if the device is/isn't a Mark 2.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:set">Device:set (r, g, b)</a></td>
-	<td class="summary">Sets the device to the given RGB.</td>
+	<td class="name" nowrap><a href="#type">type ()</a></td>
+	<td class="summary">Returns an integer indicating the version of the blink(1).</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:on">Device:on ()</a></td>
-	<td class="summary">Turns the device on.</td>
+	<td class="name" nowrap><a href="#typestring">typestring ()</a></td>
+	<td class="summary">Returns the version of the blink(1) as a string.</td>
+	</tr>
+</table>
+<h2><a href="#Color_Methods">Color Methods </a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#set">set (r, g, b)</a></td>
+	<td class="summary">Sets the device to the given RGB value.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:off">Device:off ()</a></td>
+	<td class="name" nowrap><a href="#black">black ()</a></td>
 	<td class="summary">Turns the device off.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:black">Device:black ()</a></td>
-	<td class="summary">Turns the device off.</td>
-	</tr>
-	<tr>
-	<td class="name" nowrap><a href="#Device:white">Device:white ()</a></td>
-	<td class="summary">Turns the device on.</td>
-	</tr>
-	<tr>
-	<td class="name" nowrap><a href="#Device:red">Device:red ()</a></td>
-	<td class="summary">Turns the device red.</td>
-	</tr>
-	<tr>
-	<td class="name" nowrap><a href="#Device:green">Device:green ()</a></td>
-	<td class="summary">Turns the device green.</td>
-	</tr>
-	<tr>
-	<td class="name" nowrap><a href="#Device:blue">Device:blue ()</a></td>
+	<td class="name" nowrap><a href="#blue">blue ()</a></td>
 	<td class="summary">Turns the device blue.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:cyan">Device:cyan ()</a></td>
+	<td class="name" nowrap><a href="#cyan">cyan ()</a></td>
 	<td class="summary">Turns the device cyan.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:magenta">Device:magenta ()</a></td>
+	<td class="name" nowrap><a href="#green">green ()</a></td>
+	<td class="summary">Turns the device green.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#magenta">magenta ()</a></td>
 	<td class="summary">Turns the device magenta.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:yellow">Device:yellow ()</a></td>
-	<td class="summary">Turns the device yellow.</td>
+	<td class="name" nowrap><a href="#off">off ()</a></td>
+	<td class="summary">Turns the device off.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:orange">Device:orange ()</a></td>
+	<td class="name" nowrap><a href="#on">on ()</a></td>
+	<td class="summary">Turns the device on.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#orange">orange ()</a></td>
 	<td class="summary">Turns the device orange.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:fade">Device:fade (millis, red, green, blue, n)</a></td>
+	<td class="name" nowrap><a href="#red">red ()</a></td>
+	<td class="summary">Turns the device red.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#white">white ()</a></td>
+	<td class="summary">Turns the device on.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#yellow">yellow ()</a></td>
+	<td class="summary">Turns the device yellow.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#dim">dim ()</a></td>
+	<td class="summary">Dims the color displayed by the device.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#brighten">brighten ()</a></td>
+	<td class="summary">Brightens the color displayed by the device.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#fade">fade (millis, red, green, blue, n)</a></td>
 	<td class="summary">Fades device to given RGB over given number of milliseconds.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:read">Device:read ()</a></td>
+	<td class="name" nowrap><a href="#get">get ()</a></td>
 	<td class="summary">Returns the last RGB value for the given device.</td>
 	</tr>
+</table>
+<h2><a href="#Pattern_Methods">Pattern Methods </a></h2>
+<table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#Device:play">Device:play ()</a></td>
+	<td class="name" nowrap><a href="#play">play ()</a></td>
 	<td class="summary">Plays the current pattern.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:stop">Device:stop ()</a></td>
+	<td class="name" nowrap><a href="#stop">stop ()</a></td>
 	<td class="summary">Stops playing the current pattern.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:readplay">Device:readplay ()</a></td>
+	<td class="name" nowrap><a href="#readplay">readplay ()</a></td>
 	<td class="summary">Retrieves information on current play state.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:writepatternline">Device:writepatternline ()</a></td>
-	<td class="summary">Write ...</td>
+	<td class="name" nowrap><a href="#writepatternline">writepatternline ()</a></td>
+	<td class="summary">Write pattern description for specified position.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:readpatternline">Device:readpatternline ()</a></td>
-	<td class="summary">Read ...</td>
+	<td class="name" nowrap><a href="#readpatternline">readpatternline ()</a></td>
+	<td class="summary">Read pattern description at specified position.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#Device:savepattern">Device:savepattern ()</a></td>
-	<td class="summary">Save ...</td>
+	<td class="name" nowrap><a href="#savepattern">savepattern ()</a></td>
+	<td class="summary">Saves pattern from RAM into flash.</td>
 	</tr>
 </table>
 
@@ -191,7 +252,7 @@
 <br/>
 
 
-    <h2><a name="Functions"></a>Functions</h2>
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
 
     <dl class="function">
     <dt>
@@ -199,7 +260,7 @@
     <strong>enumerate ()</strong>
     </dt>
     <dd>
-    Returns count of attached blink(1) devices.
+    Returns the number of attached blink(1) devices.
 
 
 
@@ -215,22 +276,70 @@
 
 </dd>
     <dt>
+    <a name = "gamma"></a>
+    <strong>gamma ()</strong>
+    </dt>
+    <dd>
+    Enables gamma correction.
+<p> Gamma correction is enabled by default. See the source code
+ for the <code>blink1-tool</code> for details on how gamma correction is
+ implemented.
+
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#noGamma">noGamma</a>
+    </ul>
+
+
+</dd>
+    <dt>
     <a name = "list"></a>
     <strong>list ()</strong>
     </dt>
     <dd>
     Returns a table with descriptions of all attached devices.
+<p> Each entry is itself a table which describes a single device.
+<p> The subtables have the following keys:
+ <ul>
+ <li>devid - an integer index for the device</li>
+ <li>mark - an integer specifying the device version (mk1, mk2, mk3)</li>
+ <li>serial - the device's serial number, a hexadecimal value</li>
+ </ul>
+
 
 
 
     <h3>Returns:</h3>
     <ol>
 
-           <span class="types"><a class="type" href="http://www.lua.org/manual/5.2/manual.html#6.5">table</a></span>
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.4/manual.html#6.6">table</a></span>
         each entry describes an attached device
     </ol>
 
 
+
+
+</dd>
+    <dt>
+    <a name = "noGamma"></a>
+    <strong>noGamma ()</strong>
+    </dt>
+    <dd>
+    Disables gamma correction.
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#gamma">gamma</a>
+    </ul>
 
 
 </dd>
@@ -240,19 +349,22 @@
     </dt>
     <dd>
     Opens a blink(1) device.
-<p> Create a userdata bound to a particular device. If this function
- is called without a parameter, it returns a userdata bound to the first device it finds.
-<p> Otherwise it attempts to bind to the specified device. A particular device is specified
- either by an integer ID or a string of 8 hexadecimal characters.
- The integer ID must be between <code>0</code> and <code>n-1</code> (<em>where n is the number of
- attached devices</em>). The hex string is the serial number of a particular device.
+<p> This function creates a userdata bound to a specified blink(1). If called without a parameter,
+ it returns a userdata bound to the first blink(1) it finds. Otherwise it attempts to bind to the specified device.
+<p> A particular device is specified
+ either by an integer ID or a string of 8 hexadecimal characters. Integer IDs must be between
+ <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>).
+<p> Hex strings are used to specify the serial number of a particular device. Serial numbers of all attached devices
+ can be found using the <code>list</code> function.
+<p> The function will throw an error on invalid arguments or issues opening the device. This error can be caught by
+ wrapping the call in <code>pcall</code>.
 
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">devspec</span>
-            <span class="types"><a class="type" href="http://www.lua.org/manual/5.2/manual.html#6.4">string</a> or <span class="type">int</span></span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.4/manual.html#6.4">string</a> or <span class="type">int</span></span>
          device ID or serial number
          (<em>optional</em>)
         </li>
@@ -262,65 +374,25 @@
     <ol>
 
            <span class="types"><span class="type">userdata</span></span>
-        object bound to a device
+        object bound to the specified device
     </ol>
 
     <h3>Raises:</h3>
-    error if TBD
+    error on invalid arguments or error opening device
 
 
 
 </dd>
     <dt>
-    <a name = "sleep"></a>
-    <strong>sleep ([millis])</strong>
+    <a name = "pid"></a>
+    <strong>pid ()</strong>
     </dt>
     <dd>
-    Platform-independent millisecond-resolution sleep.
-
-
-    <h3>Parameters:</h3>
-    <ul>
-        <li><span class="parameter">millis</span>
-            <span class="types"><span class="type">int</span></span>
-         number of milliseconds to pause; if not
- specified, defaults to 100
-         (<em>optional</em>)
-        </li>
-    </ul>
-
-
-
-
-
-</dd>
-</dl>
-    <h2><a name="Class_Device"></a>Class Device </h2>
-
-        The Blink(1) device class.
-    <dl class="function">
-    <dt>
-    <a name = "Device:close"></a>
-    <strong>Device:close ()</strong>
-    </dt>
-    <dd>
-    Turns the device off, then closes it.
-
-
-
-
-
-
-
-</dd>
-    <dt>
-    <a name = "Device:version"></a>
-    <strong>Device:version ()</strong>
-    </dt>
-    <dd>
-    Returns the firmware version of the device.
- The version number is returned as a scaled integer,
- e.g. "v1.1" -> 101
+    Returns the USB Product ID for the blink(1).
+<p> USB devices have an assigned product ID (PID) and
+ vendor ID (VID); these are both 16-bit numbers are are used to
+ indentify the device to the hosting computer. The VID is assigned by the USB
+ Implementers Forum and the PID is assigned by the manufacturer of the device.
 
 
 
@@ -329,6 +401,107 @@
     <ol>
 
            <span class="types"><span class="type">int</span></span>
+        Product ID.
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#vid">vid</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "sleep"></a>
+    <strong>sleep ([millis])</strong>
+    </dt>
+    <dd>
+    Platform-independent, millisecond-resolution sleep.
+<p> This function is blocking.
+
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">millis</span>
+            <span class="types"><span class="type">int</span></span>
+         milliseconds to pause; defaults to 100
+         (<em>optional</em>)
+        </li>
+    </ul>
+
+
+    <h3>Raises:</h3>
+    error if <code>millis</code> &lt; 0
+
+
+
+</dd>
+    <dt>
+    <a name = "vid"></a>
+    <strong>vid ()</strong>
+    </dt>
+    <dd>
+    Returns the USB vendor ID for ThingM.
+<p> USB devices have an assigned product ID (PID) and
+ vendor ID (VID); these are both 16-bit numbers are are used to
+ indentify the device to the hosting computer. The VID is assigned by the USB
+ Implementers Forum and the PID is assigned by the manufacturer of the device.
+
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">int</span></span>
+        Vendor ID.
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#pid">pid</a>
+    </ul>
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Lifecycle_Methods"></a>Lifecycle Methods </h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "close"></a>
+    <strong>close ()</strong>
+    </dt>
+    <dd>
+    Turns the device off, then detaches it.
+
+
+
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Informational_Methods"></a>Informational Methods </h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "version"></a>
+    <strong>version ()</strong>
+    </dt>
+    <dd>
+    Returns the firmware version of the device.
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.4/manual.html#6.4">string</a></span>
         firmware version number
     </ol>
 
@@ -337,8 +510,8 @@
 
 </dd>
     <dt>
-    <a name = "Device:serial"></a>
-    <strong>Device:serial ()</strong>
+    <a name = "serial"></a>
+    <strong>serial ()</strong>
     </dt>
     <dd>
     Returns the serial number of the device.
@@ -348,7 +521,7 @@
     <h3>Returns:</h3>
     <ol>
 
-           <span class="types"><a class="type" href="http://www.lua.org/manual/5.2/manual.html#6.4">string</a></span>
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.4/manual.html#6.4">string</a></span>
         serial number
     </ol>
 
@@ -357,8 +530,8 @@
 
 </dd>
     <dt>
-    <a name = "Device:isMk2"></a>
-    <strong>Device:isMk2 ()</strong>
+    <a name = "isMk2"></a>
+    <strong>isMk2 ()</strong>
     </dt>
     <dd>
     Returns true/false if the device is/isn't a Mark 2.
@@ -377,51 +550,97 @@
 
 </dd>
     <dt>
-    <a name = "Device:set"></a>
-    <strong>Device:set (r, g, b)</strong>
+    <a name = "type"></a>
+    <strong>type ()</strong>
     </dt>
     <dd>
-    Sets the device to the given RGB.
+    Returns an integer indicating the version of the blink(1).
+<p> <ul>
+ <li>1 - Mark 1</li>
+ <li>2 - Mark 2</li>
+ <li>3 - Mark 3</li>
+ </ul>
+
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">int</span></span>
+        the version of the device
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "typestring"></a>
+    <strong>typestring ()</strong>
+    </dt>
+    <dd>
+    Returns the version of the blink(1) as a string.
+<p> This will be <code>mk1</code>, <code>mk2</code>, <code>mk3</code>.
+
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.4/manual.html#6.4">string</a></span>
+        the version of the device
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Color_Methods"></a>Color Methods </h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "set"></a>
+    <strong>set (r, g, b)</strong>
+    </dt>
+    <dd>
+    Sets the device to the given RGB value.
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">r</span>
             <span class="types"><span class="type">int</span></span>
-         &mdash; red value in range [0-255]
+         red value in range [0-255]
         </li>
         <li><span class="parameter">g</span>
             <span class="types"><span class="type">int</span></span>
-         &mdash; green value in range [0-255]
+         green value in range [0-255]
         </li>
         <li><span class="parameter">b</span>
             <span class="types"><span class="type">int</span></span>
-         &mdash; blue value in range [0-255]
+         blue value in range [0-255]
         </li>
     </ul>
 
+    <h3>Returns:</h3>
+    <ol>
 
+           <span class="types"><span class="type">bool</span></span>
+        true if the color is set
+    </ol>
 
-
-
-</dd>
-    <dt>
-    <a name = "Device:on"></a>
-    <strong>Device:on ()</strong>
-    </dt>
-    <dd>
-    Turns the device on.  Equivalent to <code>set(255, 255, 255)</code>
-
-
-
-
+    <h3>Raises:</h3>
+    error if either r, g, or b not in the correct range
 
 
 
 </dd>
     <dt>
-    <a name = "Device:off"></a>
-    <strong>Device:off ()</strong>
+    <a name = "black"></a>
+    <strong>black ()</strong>
     </dt>
     <dd>
     Turns the device off.  Equivalent to <code>set(0, 0, 0)</code>
@@ -434,64 +653,8 @@
 
 </dd>
     <dt>
-    <a name = "Device:black"></a>
-    <strong>Device:black ()</strong>
-    </dt>
-    <dd>
-    Turns the device off.  Equivalent to <code>set(0, 0, 0)</code>
-
-
-
-
-
-
-
-</dd>
-    <dt>
-    <a name = "Device:white"></a>
-    <strong>Device:white ()</strong>
-    </dt>
-    <dd>
-    Turns the device on.  Equivalent to <code>set(255, 255, 255)</code>
-
-
-
-
-
-
-
-</dd>
-    <dt>
-    <a name = "Device:red"></a>
-    <strong>Device:red ()</strong>
-    </dt>
-    <dd>
-    Turns the device red.  Equivalent to <code>set(255, 0, 0)</code>
-
-
-
-
-
-
-
-</dd>
-    <dt>
-    <a name = "Device:green"></a>
-    <strong>Device:green ()</strong>
-    </dt>
-    <dd>
-    Turns the device green.  Equivalent to <code>set(0, 255, 0)</code>
-
-
-
-
-
-
-
-</dd>
-    <dt>
-    <a name = "Device:blue"></a>
-    <strong>Device:blue ()</strong>
+    <a name = "blue"></a>
+    <strong>blue ()</strong>
     </dt>
     <dd>
     Turns the device blue.  Equivalent to <code>set(0, 0, 255)</code>
@@ -504,8 +667,8 @@
 
 </dd>
     <dt>
-    <a name = "Device:cyan"></a>
-    <strong>Device:cyan ()</strong>
+    <a name = "cyan"></a>
+    <strong>cyan ()</strong>
     </dt>
     <dd>
     Turns the device cyan.  Equivalent to <code>set(0, 255, 255)</code>
@@ -518,8 +681,22 @@
 
 </dd>
     <dt>
-    <a name = "Device:magenta"></a>
-    <strong>Device:magenta ()</strong>
+    <a name = "green"></a>
+    <strong>green ()</strong>
+    </dt>
+    <dd>
+    Turns the device green.  Equivalent to <code>set(0, 255, 0)</code>
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "magenta"></a>
+    <strong>magenta ()</strong>
     </dt>
     <dd>
     Turns the device magenta.  Equivalent to <code>set(255, 0, 255)</code>
@@ -532,11 +709,11 @@
 
 </dd>
     <dt>
-    <a name = "Device:yellow"></a>
-    <strong>Device:yellow ()</strong>
+    <a name = "off"></a>
+    <strong>off ()</strong>
     </dt>
     <dd>
-    Turns the device yellow.  Equivalent to <code>set(255, 255, 0)</code>
+    Turns the device off.  Equivalent to <code>set(0, 0, 0)</code>
 
 
 
@@ -546,8 +723,22 @@
 
 </dd>
     <dt>
-    <a name = "Device:orange"></a>
-    <strong>Device:orange ()</strong>
+    <a name = "on"></a>
+    <strong>on ()</strong>
+    </dt>
+    <dd>
+    Turns the device on.  Equivalent to <code>set(255, 255, 255)</code>
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "orange"></a>
+    <strong>orange ()</strong>
     </dt>
     <dd>
     Turns the device orange.  Equivalent to <code>set(255, 165, 0)</code>
@@ -560,8 +751,96 @@
 
 </dd>
     <dt>
-    <a name = "Device:fade"></a>
-    <strong>Device:fade (millis, red, green, blue, n)</strong>
+    <a name = "red"></a>
+    <strong>red ()</strong>
+    </dt>
+    <dd>
+    Turns the device red.  Equivalent to <code>set(255, 0, 0)</code>
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "white"></a>
+    <strong>white ()</strong>
+    </dt>
+    <dd>
+    Turns the device on.  Equivalent to <code>set(255, 255, 255)</code>
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "yellow"></a>
+    <strong>yellow ()</strong>
+    </dt>
+    <dd>
+    Turns the device yellow.  Equivalent to <code>set(255, 255, 0)</code>
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "dim"></a>
+    <strong>dim ()</strong>
+    </dt>
+    <dd>
+    Dims the color displayed by the device.  Note: calling this function
+ forces Gamma correction off. You will need to explicitly turn it back on if
+ you want it afterwards.
+
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        true if successful | false and an error description if not
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "brighten"></a>
+    <strong>brighten ()</strong>
+    </dt>
+    <dd>
+    Brightens the color displayed by the device.  Note: calling this function
+ forces Gamma correction off. You will need to explicitly turn it back on if
+ you want it afterwards.
+
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        true if successful | false and an error description if not
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "fade"></a>
+    <strong>fade (millis, red, green, blue, n)</strong>
     </dt>
     <dd>
     Fades device to given RGB over given number of milliseconds.
@@ -597,8 +876,8 @@
 
 </dd>
     <dt>
-    <a name = "Device:read"></a>
-    <strong>Device:read ()</strong>
+    <a name = "get"></a>
+    <strong>get ()</strong>
     </dt>
     <dd>
     Returns the last RGB value for the given device.
@@ -625,12 +904,18 @@
 
 
 </dd>
+</dl>
+    <h2 class="section-header "><a name="Pattern_Methods"></a>Pattern Methods </h2>
+
+    <dl class="function">
     <dt>
-    <a name = "Device:play"></a>
-    <strong>Device:play ()</strong>
+    <a name = "play"></a>
+    <strong>play ()</strong>
     </dt>
     <dd>
-    Plays the current pattern.
+    Plays the current pattern.  Optionally specify a sub-range to play, as
+ well as an optional count (0 = loop forever).
+
 
 
 
@@ -640,8 +925,8 @@
 
 </dd>
     <dt>
-    <a name = "Device:stop"></a>
-    <strong>Device:stop ()</strong>
+    <a name = "stop"></a>
+    <strong>stop ()</strong>
     </dt>
     <dd>
     Stops playing the current pattern.
@@ -654,11 +939,49 @@
 
 </dd>
     <dt>
-    <a name = "Device:readplay"></a>
-    <strong>Device:readplay ()</strong>
+    <a name = "readplay"></a>
+    <strong>readplay ()</strong>
     </dt>
     <dd>
     Retrieves information on current play state.
+<p> Displays information about the pattern loaded into the device.
+ The <code>count</code> value decreases by one each time the pattern
+ repeats and is 0 when the pattern has played the specified number
+ of times &mdash; unless the count was 0 when the play command was issueed;
+ in which case, the pattern repeats indefinitely and count is always 0.
+
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+           <span class="types"><span class="type">bool</span></span>
+        true if pattern is playing</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        start position</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        end position</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        count</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        current position</li>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "writepatternline"></a>
+    <strong>writepatternline ()</strong>
+    </dt>
+    <dd>
+    Write pattern description for specified position.
 
 
 
@@ -668,11 +991,11 @@
 
 </dd>
     <dt>
-    <a name = "Device:writepatternline"></a>
-    <strong>Device:writepatternline ()</strong>
+    <a name = "readpatternline"></a>
+    <strong>readpatternline ()</strong>
     </dt>
     <dd>
-    Write ...
+    Read pattern description at specified position.
 
 
 
@@ -682,25 +1005,11 @@
 
 </dd>
     <dt>
-    <a name = "Device:readpatternline"></a>
-    <strong>Device:readpatternline ()</strong>
+    <a name = "savepattern"></a>
+    <strong>savepattern ()</strong>
     </dt>
     <dd>
-    Read ...
-
-
-
-
-
-
-
-</dd>
-    <dt>
-    <a name = "Device:savepattern"></a>
-    <strong>Device:savepattern ()</strong>
-    </dt>
-    <dd>
-    Save ...
+    Saves pattern from RAM into flash.
 
 
 
@@ -715,8 +1024,8 @@
 </div> <!-- id="content" -->
 </div> <!-- id="main" -->
 <div id="about">
-<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.3</a></i>
-<i style="float:right;">Last updated 2015-05-18 16:57:21 </i>
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2024-06-12 20:33:06 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>
