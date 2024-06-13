@@ -60,31 +60,37 @@
 
 <h1>Module <code>blink</code></h1>
 <p>Lua binding to the Blink(1) library.</p>
-<p>
 <p> The <a href="https://blink1.thingm.com/">blink(1)</a> is a small RGB LED that plugs into a USB port and can be used
  to indicate server status, receipt of new email, completion (<em>successful, hopefully</em>) of a compilation job, or
- anything you might want to signal. This library allows you to control these devices with Lua.
+ anything you might want to signal. This library allows you to control these devices with Lua.</p>
+
 <p> The library provides a function which creates objects that represent an attached blink(1). The object's metatable
  contains all the functionality for manipulating the device (e.g. display a color, show
- a pattern, etc).
+ a pattern, etc).</p>
+
 <p> This documentation uses the term <em>function</em> to refer to device-independent functionality and <em>method</em> to refer
  to functions provided by a blink(1) object's metatable, i.e. device <em>dependent</em> functionality. Functions should be invoked
- using dot notation, e.g.
-<p> <code>blink.enumerate()</code>
-<p> whereas methods should be invoked using colon notation, e.g.:
-<p> <code>device:set(r, g, b)</code>
-<p> otherwise the method will throw an error.
-<p> See the <a href="topics/README.md.html">README</a> file for installation instructions.
+ using dot notation, e.g.</p>
+
+<p> <code>blink.enumerate()</code></p>
+
+<p> whereas methods should be invoked using colon notation, e.g.:</p>
+
+<p> <code>device:set(r, g, b)</code></p>
+
+<p> otherwise the method will throw an error.</p>
+
+<p> See the <a href="topics/README.md.html">README</a> file for installation instructions.</p>
+
 <p> <strong>NOTE</strong>: This library is primarily designed to work with Mk 2 versions of the blink(1). The code <em>should</em>
  work with Mk 3 devices (<em>although it does not implement Mk 3 functionality such as notes</em>); it
- probably isn't very useful for Mk 1 devices.
-</p>
+ probably isn't very useful for Mk 1 devices. </p>
     <h3>Info:</h3>
     <ul>
         <li><strong>Copyright</strong>: 2014-2024 BlueDino Software</li>
         <li><strong>Release</strong>: 2.0.0</li>
         <li><strong>License</strong>: MIT License (see <a href="topics/LICENSE.html">LICENSE</a>)</li>
-        <li><strong>Author</strong>: Matthew M. Burke <matthew@bluedino.net></li>
+        <li><strong>Author</strong>: Matthew M. Burke <a href="&#x6d;&#97;&#x69;&#108;&#x74;&#111;&#x3a;m&#97;&#x74;&#116;&#x68;&#101;&#x77;&#64;&#x62;l&#117;&#x65;&#100;&#x69;&#110;&#x6f;&#46;&#x6e;&#101;&#x74;">&#x6d;&#97;&#x74;&#116;&#x68;&#101;&#x77;&#64;&#x62;l&#117;&#x65;&#100;&#x69;&#110;&#x6f;.&#110;&#x65;&#116;</a></li>
     </ul>
 
 
@@ -280,11 +286,11 @@
     <strong>gamma ()</strong>
     </dt>
     <dd>
-    Enables gamma correction.
+    Enables gamma correction. </p>
+
 <p> Gamma correction is enabled by default. See the source code
  for the <code>blink1-tool</code> for details on how gamma correction is
  implemented.
-
 
 
 
@@ -302,15 +308,16 @@
     <strong>list ()</strong>
     </dt>
     <dd>
-    Returns a table with descriptions of all attached devices.
-<p> Each entry is itself a table which describes a single device.
+    Returns a table with descriptions of all attached devices. </p>
+
+<p> Each entry is itself a table which describes a single device.</p>
+
 <p> The subtables have the following keys:
  <ul>
  <li>devid - an integer index for the device</li>
  <li>mark - an integer specifying the device version (mk1, mk2, mk3)</li>
  <li>serial - the device's serial number, a hexadecimal value</li>
  </ul>
-
 
 
 
@@ -348,17 +355,20 @@
     <strong>open ([devspec])</strong>
     </dt>
     <dd>
-    Opens a blink(1) device.
+    Opens a blink(1) device. </p>
+
 <p> This function creates a userdata bound to a specified blink(1). If called without a parameter,
- it returns a userdata bound to the first blink(1) it finds. Otherwise it attempts to bind to the specified device.
+ it returns a userdata bound to the first blink(1) it finds. Otherwise it attempts to bind to the specified device.</p>
+
 <p> A particular device is specified
  either by an integer ID or a string of 8 hexadecimal characters. Integer IDs must be between
- <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>).
+ <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>).</p>
+
 <p> Hex strings are used to specify the serial number of a particular device. Serial numbers of all attached devices
- can be found using the <code>list</code> function.
+ can be found using the <code>list</code> function.</p>
+
 <p> The function will throw an error on invalid arguments or issues opening the device. This error can be caught by
  wrapping the call in <code>pcall</code>.
-
 
 
     <h3>Parameters:</h3>
@@ -388,12 +398,12 @@
     <strong>pid ()</strong>
     </dt>
     <dd>
-    Returns the USB Product ID for the blink(1).
+    Returns the USB Product ID for the blink(1). </p>
+
 <p> USB devices have an assigned product ID (PID) and
  vendor ID (VID); these are both 16-bit numbers are are used to
  indentify the device to the hosting computer. The VID is assigned by the USB
  Implementers Forum and the PID is assigned by the manufacturer of the device.
-
 
 
 
@@ -417,9 +427,9 @@
     <strong>sleep ([millis])</strong>
     </dt>
     <dd>
-    Platform-independent, millisecond-resolution sleep.
-<p> This function is blocking.
+    Platform-independent, millisecond-resolution sleep. </p>
 
+<p> This function is blocking.
 
 
     <h3>Parameters:</h3>
@@ -443,12 +453,12 @@
     <strong>vid ()</strong>
     </dt>
     <dd>
-    Returns the USB vendor ID for ThingM.
+    Returns the USB vendor ID for ThingM. </p>
+
 <p> USB devices have an assigned product ID (PID) and
  vendor ID (VID); these are both 16-bit numbers are are used to
  indentify the device to the hosting computer. The VID is assigned by the USB
  Implementers Forum and the PID is assigned by the manufacturer of the device.
-
 
 
 
@@ -554,13 +564,13 @@
     <strong>type ()</strong>
     </dt>
     <dd>
-    Returns an integer indicating the version of the blink(1).
+    Returns an integer indicating the version of the blink(1). </p>
+
 <p> <ul>
  <li>1 - Mark 1</li>
  <li>2 - Mark 2</li>
  <li>3 - Mark 3</li>
  </ul>
-
 
 
 
@@ -580,9 +590,9 @@
     <strong>typestring ()</strong>
     </dt>
     <dd>
-    Returns the version of the blink(1) as a string.
-<p> This will be <code>mk1</code>, <code>mk2</code>, <code>mk3</code>.
+    Returns the version of the blink(1) as a string. </p>
 
+<p> This will be <code>mk1</code>, <code>mk2</code>, <code>mk3</code>.
 
 
 
@@ -803,7 +813,6 @@
 
 
 
-
     <h3>Returns:</h3>
     <ol>
 
@@ -823,7 +832,6 @@
     Brightens the color displayed by the device.  Note: calling this function
  forces Gamma correction off. You will need to explicitly turn it back on if
  you want it afterwards.
-
 
 
 
@@ -922,7 +930,6 @@
 
 
 
-
 </dd>
     <dt>
     <a name = "stop"></a>
@@ -943,13 +950,13 @@
     <strong>readplay ()</strong>
     </dt>
     <dd>
-    Retrieves information on current play state.
+    Retrieves information on current play state. </p>
+
 <p> Displays information about the pattern loaded into the device.
  The <code>count</code> value decreases by one each time the pattern
  repeats and is 0 when the pattern has played the specified number
  of times &mdash; unless the count was 0 when the play command was issueed;
  in which case, the pattern repeats indefinitely and count is always 0.
-
 
 
 
@@ -1025,7 +1032,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2024-06-12 20:33:06 </i>
+<i style="float:right;">Last updated 2024-06-13 14:25:30 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>

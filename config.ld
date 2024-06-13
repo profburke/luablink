@@ -7,3 +7,4 @@ description = 'A simple binding to the blink(1) by ThingM'
 readme = {'README.md', 'CHANGELOG.md', 'LICENSE'}
 examples =  'examples' 
 
+format = 'markdown'
