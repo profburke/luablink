@@ -61,16 +61,14 @@
 <h1>Module <code>blink</code></h1>
 <p>Lua binding to the Blink(1) library.</p>
 <p> The <a href="https://blink1.thingm.com/">blink(1)</a> is a small RGB LED that plugs into a USB port and can be used
- to indicate server status, receipt of new email, completion (<em>successful, hopefully</em>) of a compilation job, or
- anything you might want to signal. This library allows you to control these devices with Lua.</p>
+ to indicate server status, receipt of new email, completion of a compilation job, or
+ anything else you might want to signal. This library allows you to control these devices with Lua.</p>
 
-<p> The library provides a function which creates objects that represent an attached blink(1). The object's metatable
- contains all the functionality for manipulating the device (e.g. display a color, show
- a pattern, etc).</p>
+<p> This documentation uses the term <em>function</em> to refer to device-independent functionality, such as list all the
+ attached devices, and <em>method</em> to refer to functions provided by a blink(1) object's metatable, i.e. device
+ <em>dependent</em> functionality, such as displaying a particular color.</p>
 
-<p> This documentation uses the term <em>function</em> to refer to device-independent functionality and <em>method</em> to refer
- to functions provided by a blink(1) object's metatable, i.e. device <em>dependent</em> functionality. Functions should be invoked
- using dot notation, e.g.</p>
+<p> Functions should be invoked using dot notation, e.g.</p>
 
 <p> <code>blink.enumerate()</code></p>
 
@@ -80,17 +78,17 @@
 
 <p> otherwise the method will throw an error.</p>
 
-<p> See the <a href="topics/README.md.html">README</a> file for installation instructions.</p>
+<p> The <a href="topics/README.md.html">README</a> file provides installation instructions.</p>
 
-<p> <strong>NOTE</strong>: This library is primarily designed to work with Mk 2 versions of the blink(1). The code <em>should</em>
- work with Mk 3 devices (<em>although it does not implement Mk 3 functionality such as notes</em>); it
- probably isn't very useful for Mk 1 devices. </p>
+<p> <strong>NOTE</strong>: This library is primarily designed to work with the Mark 2 version of the blink(1). The code
+ <em>should</em> work with Mark 3 devices (<em>although it does not implement Mark 3 functionality such as notes</em>); it
+ probably isn't very useful for Markk 1 devices since the C API changed substantially from Mark 1 to Mark 2. </p>
     <h3>Info:</h3>
     <ul>
         <li><strong>Copyright</strong>: 2014-2024 BlueDino Software</li>
         <li><strong>Release</strong>: 2.0.0</li>
         <li><strong>License</strong>: MIT License (see <a href="topics/LICENSE.html">LICENSE</a>)</li>
-        <li><strong>Author</strong>: Matthew M. Burke <a href="&#x6d;&#97;&#x69;&#108;&#x74;&#111;&#x3a;m&#97;&#x74;&#116;&#x68;&#101;&#x77;&#64;&#x62;l&#117;&#x65;&#100;&#x69;&#110;&#x6f;&#46;&#x6e;&#101;&#x74;">&#x6d;&#97;&#x74;&#116;&#x68;&#101;&#x77;&#64;&#x62;l&#117;&#x65;&#100;&#x69;&#110;&#x6f;.&#110;&#x65;&#116;</a></li>
+        <li><strong>Author</strong>: Matthew M. Burke</li>
     </ul>
 
 
@@ -222,14 +220,14 @@
 	<td class="summary">Fades device to given RGB over given number of milliseconds.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#get">get ()</a></td>
+	<td class="name" nowrap><a href="#get">get ([n])</a></td>
 	<td class="summary">Returns the last RGB value for the given device.</td>
 	</tr>
 </table>
 <h2><a href="#Pattern_Methods">Pattern Methods </a></h2>
 <table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#play">play ()</a></td>
+	<td class="name" nowrap><a href="#play">play ([start[, stop[, count]]])</a></td>
 	<td class="summary">Plays the current pattern.</td>
 	</tr>
 	<tr>
@@ -241,11 +239,11 @@
 	<td class="summary">Retrieves information on current play state.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#writepatternline">writepatternline ()</a></td>
+	<td class="name" nowrap><a href="#writepatternline">writepatternline (millis, r, g, b, pos)</a></td>
 	<td class="summary">Write pattern description for specified position.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#readpatternline">readpatternline ()</a></td>
+	<td class="name" nowrap><a href="#readpatternline">readpatternline (pos)</a></td>
 	<td class="summary">Read pattern description at specified position.</td>
 	</tr>
 	<tr>
@@ -358,17 +356,17 @@
     Opens a blink(1) device. </p>
 
 <p> This function creates a userdata bound to a specified blink(1). If called without a parameter,
- it returns a userdata bound to the first blink(1) it finds. Otherwise it attempts to bind to the specified device.</p>
+ it returns a userdata bound to the blink(1) device with ID 0. Otherwise it attempts to bind to the specified device.</p>
 
 <p> A particular device is specified
  either by an integer ID or a string of 8 hexadecimal characters. Integer IDs must be between
  <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>).</p>
 
-<p> Hex strings are used to specify the serial number of a particular device. Serial numbers of all attached devices
- can be found using the <code>list</code> function.</p>
+<p> Hex strings are used to specify the serial number of a particular device. Serial numbers of all plugged in devices
+ can be found using the <code><a href="index.html#list">list</a></code> function.</p>
 
-<p> The function will throw an error on invalid arguments or issues opening the device. This error can be caught by
- wrapping the call in <code>pcall</code>.
+<p> <code>Open</code> will throw an error on invalid arguments or issues opening the device. This error can be caught by
+ wrapping the call in <code><a href="https://www.lua.org/manual/5.4/manual.html#pdf-pcall">pcall</a></code>.
 
 
     <h3>Parameters:</h3>
@@ -486,7 +484,10 @@
     <strong>close ()</strong>
     </dt>
     <dd>
-    Turns the device off, then detaches it.
+    Turns the device off, then detaches it. </p>
+
+<p> Calling <code>close</code> does not delete the userdata, but any subsequent
+ calls to this object will return <code>nil</code> and an error message.
 
 
 
@@ -566,11 +567,7 @@
     <dd>
     Returns an integer indicating the version of the blink(1). </p>
 
-<p> <ul>
- <li>1 - Mark 1</li>
- <li>2 - Mark 2</li>
- <li>3 - Mark 3</li>
- </ul>
+<p> This function returns 1 for a Mark 1 device 2 for Mark 2, etc.
 
 
 
@@ -821,6 +818,10 @@
     </ol>
 
 
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#brighten">brighten</a>
+    </ul>
 
 
 </dd>
@@ -843,6 +844,10 @@
     </ol>
 
 
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#dim">dim</a>
+    </ul>
 
 
 </dd>
@@ -851,7 +856,9 @@
     <strong>fade (millis, red, green, blue, n)</strong>
     </dt>
     <dd>
-    Fades device to given RGB over given number of milliseconds.
+    Fades device to given RGB over given number of milliseconds. </p>
+
+<p> You can specify either the top, bottom, or both LEDs to fade.
 
 
     <h3>Parameters:</h3>
@@ -885,12 +892,24 @@
 </dd>
     <dt>
     <a name = "get"></a>
-    <strong>get ()</strong>
+    <strong>get ([n])</strong>
     </dt>
     <dd>
-    Returns the last RGB value for the given device.
+    Returns the last RGB value for the given device. </p>
+
+<p> If you specify 0, 1 or no parameter, it retrieves the bottom LED.
+ If you specify 2, it returns the top LED. The retrieved value is
+ after gamma correction (<em>if enabled</em>).
 
 
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">n</span>
+            <span class="types"><span class="type">int</span></span>
+         the LED to retrieve
+         (<em>optional</em>)
+        </li>
+    </ul>
 
     <h3>Returns:</h3>
     <ol>
@@ -918,13 +937,33 @@
     <dl class="function">
     <dt>
     <a name = "play"></a>
-    <strong>play ()</strong>
+    <strong>play ([start[, stop[, count]]])</strong>
     </dt>
     <dd>
-    Plays the current pattern.  Optionally specify a sub-range to play, as
+    Plays the current pattern. </p>
+
+<p> Optionally specify a sub-range to play, as
  well as an optional count (0 = loop forever).
 
 
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">start</span>
+            <span class="types"><span class="type">int</span></span>
+         the starting position
+         (<em>optional</em>)
+        </li>
+        <li><span class="parameter">stop</span>
+            <span class="types"><span class="type">int</span></span>
+         the end position
+         (<em>optional</em>)
+        </li>
+        <li><span class="parameter">count</span>
+            <span class="types"><span class="type">int</span></span>
+         the number of times to play
+         (<em>optional</em>)
+        </li>
+    </ul>
 
 
 
@@ -955,7 +994,7 @@
 <p> Displays information about the pattern loaded into the device.
  The <code>count</code> value decreases by one each time the pattern
  repeats and is 0 when the pattern has played the specified number
- of times &mdash; unless the count was 0 when the play command was issueed;
+ of times &mdash; unless the count was 0 when the play command was issued;
  in which case, the pattern repeats indefinitely and count is always 0.
 
 
@@ -985,12 +1024,35 @@
 </dd>
     <dt>
     <a name = "writepatternline"></a>
-    <strong>writepatternline ()</strong>
+    <strong>writepatternline (millis, r, g, b, pos)</strong>
     </dt>
     <dd>
     Write pattern description for specified position.
 
 
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">millis</span>
+            <span class="types"><span class="type">int</span></span>
+         the length of time to display
+        </li>
+        <li><span class="parameter">r</span>
+            <span class="types"><span class="type">int</span></span>
+         the red value to display
+        </li>
+        <li><span class="parameter">g</span>
+            <span class="types"><span class="type">int</span></span>
+         the green value to display
+        </li>
+        <li><span class="parameter">b</span>
+            <span class="types"><span class="type">int</span></span>
+         the blue value to display
+        </li>
+        <li><span class="parameter">pos</span>
+            <span class="types"><span class="type">int</span></span>
+         the position to set
+        </li>
+    </ul>
 
 
 
@@ -999,13 +1061,35 @@
 </dd>
     <dt>
     <a name = "readpatternline"></a>
-    <strong>readpatternline ()</strong>
+    <strong>readpatternline (pos)</strong>
     </dt>
     <dd>
     Read pattern description at specified position.
 
 
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">pos</span>
+            <span class="types"><span class="type">int</span></span>
+         the position to read
+        </li>
+    </ul>
 
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        millis the length of time to display</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        r the red value displayed</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        g the green value displayed</li>
+        <li>
+           <span class="types"><span class="type">int</span></span>
+        b the blue value displayed</li>
+    </ol>
 
 
 
@@ -1020,6 +1104,12 @@
 
 
 
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><span class="type">boolean</span></span>
+        returns true if the pattern saved or nil and an error message if there was a problem
+    </ol>
 
 
 
@@ -1032,7 +1122,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2024-06-13 14:25:30 </i>
+<i style="float:right;">Last updated 2024-06-15 14:36:59 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>

@@ -1,16 +1,14 @@
 /*** Lua binding to the Blink(1) library.
  *
  * The <a href="https://blink1.thingm.com/">blink(1)</a> is a small RGB LED that plugs into a USB port and can be used
- * to indicate server status, receipt of new email, completion (<em>successful, hopefully</em>) of a compilation job, or
- * anything you might want to signal. This library allows you to control these devices with Lua.
+ * to indicate server status, receipt of new email, completion of a compilation job, or
+ * anything else you might want to signal. This library allows you to control these devices with Lua.
  *
- * The library provides a function which creates objects that represent an attached blink(1). The object's metatable
- * contains all the functionality for manipulating the device (e.g. display a color, show
- * a pattern, etc).
+ * This documentation uses the term <em>function</em> to refer to device-independent functionality, such as list all the
+ * attached devices, and <em>method</em> to refer to functions provided by a blink(1) object's metatable, i.e. device
+ * <em>dependent</em> functionality, such as displaying a particular color.
  *
- * This documentation uses the term <em>function</em> to refer to device-independent functionality and <em>method</em> to refer
- * to functions provided by a blink(1) object's metatable, i.e. device <em>dependent</em> functionality. Functions should be invoked
- * using dot notation, e.g.
+ * Functions should be invoked using dot notation, e.g.
  *
  * <code>blink.enumerate()</code>
  *
@@ -20,15 +18,15 @@
  *
  * otherwise the method will throw an error.
  *
- * See the <a href="topics/README.md.html">README</a> file for installation instructions.
+ * The <a href="topics/README.md.html">README</a> file provides installation instructions.
  *
- * <strong>NOTE</strong>: This library is primarily designed to work with Mk 2 versions of the blink(1). The code <em>should</em>
- * work with Mk 3 devices (<em>although it does not implement Mk 3 functionality such as notes</em>); it
- * probably isn't very useful for Mk 1 devices. 
+ * <strong>NOTE</strong>: This library is primarily designed to work with the Mark 2 version of the blink(1). The code
+ * <em>should</em> work with Mark 3 devices (<em>although it does not implement Mark 3 functionality such as notes</em>); it
+ * probably isn't very useful for Markk 1 devices since the C API changed substantially from Mark 1 to Mark 2. 
  *
  * @module blink
  * @release 2.0.0
- * @author Matthew M. Burke <matthew@bluedino.net>
+ * @author Matthew M. Burke
  * @copyright 2014-2024 BlueDino Software
  * @license MIT License (see <a href="topics/LICENSE.html">LICENSE</a>)
  *
@@ -187,17 +185,17 @@ static int lfun_noDegamma(lua_State *L) {
 /*** Opens a blink(1) device.
  *
  * This function creates a userdata bound to a specified blink(1). If called without a parameter,
- * it returns a userdata bound to the first blink(1) it finds. Otherwise it attempts to bind to the specified device.
+ * it returns a userdata bound to the blink(1) device with ID 0. Otherwise it attempts to bind to the specified device.
  *
  * A particular device is specified
  * either by an integer ID or a string of 8 hexadecimal characters. Integer IDs must be between
  * <code>0</code> and <code>n-1</code> (<em>where n is the number of attached devices</em>).
  *
- * Hex strings are used to specify the serial number of a particular device. Serial numbers of all attached devices
- * can be found using the <code>list</code> function.
+ * Hex strings are used to specify the serial number of a particular device. Serial numbers of all plugged in devices
+ * can be found using the <code>@{list}</code> function.
  *
- * The function will throw an error on invalid arguments or issues opening the device. This error can be caught by
- * wrapping the call in <code>pcall</code>.
+ * <code>Open</code> will throw an error on invalid arguments or issues opening the device. This error can be caught by
+ * wrapping the call in <code>@{pcall}</code>.
  *
  * @function open
  * @tparam[opt] ?string|int devspec device ID or serial number
@@ -329,6 +327,9 @@ static int lfun_vid(lua_State *L) {
 
 /*** Turns the device off, then detaches it.
  *
+ * Calling <code>close</code> does not delete the userdata, but any subsequent
+ * calls to this object will return <code>nil</code> and an error message.
+ *
  * @function close
  *
  */
@@ -422,11 +423,7 @@ static int lfun_isMk2(lua_State *L) {
 
 /*** Returns an integer indicating the version of the blink(1).
  *
- * <ul>
- * <li>1 - Mark 1</li>
- * <li>2 - Mark 2</li>
- * <li>3 - Mark 3</li>
- * </ul>
+ * This function returns 1 for a Mark 1 device 2 for Mark 2, etc.
  *
  * @function type
  * @treturn int the version of the device
@@ -574,6 +571,7 @@ SET(Yellow, 255, 255, 0)
  * you want it afterwards.
  *
  * @function dim
+ * @see brighten
  * @treturn boolean true if successful | false and an error description if not
  *
  */
@@ -620,6 +618,7 @@ static int lfun_dim(lua_State *L) {
  * you want it afterwards.
  *
  * @function brighten
+ * @see dim
  * @treturn boolean true if successful | false and an error description if not
  *
  */
@@ -657,6 +656,8 @@ static int lfun_brighten(lua_State *L) {
 
 /*** Fades device to given RGB over given number of milliseconds.
  *
+ * You can specify either the top, bottom, or both LEDs to fade.
+ *
  * @function fade
  * @int millis the fade duration
  * @int red the red component [0-255]
@@ -667,6 +668,7 @@ static int lfun_brighten(lua_State *L) {
 static int lfun_fadeToRGB(lua_State *L) {
   // TODO: consider re-arranging paramaeter order to make it more sensible
   // and to allow for default params
+  // TODO: default n to 0
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   int millis = luaL_checkinteger(L, 2);
   int r = luaL_checkinteger(L, 3);
@@ -693,7 +695,12 @@ static int lfun_fadeToRGB(lua_State *L) {
 
 /*** Returns the last RGB value for the given device.
  *
+ * If you specify 0, 1 or no parameter, it retrieves the bottom LED.
+ * If you specify 2, it returns the top LED. The retrieved value is
+ * after gamma correction (<em>if enabled</em>).
+ *
  * @function get
+ * @tparam[opt] int n the LED to retrieve
  * @treturn int last set red value [0, 255]
  * @treturn int last set green value [0, 255]
  * @treturn int last set blue value [0, 255]
@@ -732,10 +739,15 @@ static int lfun_readRGB(lua_State *L) {
  *
  */
  
-/*** Plays the current pattern. Optionally specify a sub-range to play, as
+/*** Plays the current pattern.
+ *
+ * Optionally specify a sub-range to play, as
  * well as an optional count (0 = loop forever).
  *
  * @function play
+ * @tparam[opt] int start the starting position
+ * @tparam[opt] int stop the end position
+ * @tparam[opt] int count the number of times to play
  *
  */
 static int lfun_play(lua_State *L) {
@@ -788,7 +800,7 @@ static int lfun_stop(lua_State *L) {
  * Displays information about the pattern loaded into the device.
  * The <code>count</code> value decreases by one each time the pattern
  * repeats and is 0 when the pattern has played the specified number
- * of times &mdash; unless the count was 0 when the play command was issueed;
+ * of times &mdash; unless the count was 0 when the play command was issued;
  * in which case, the pattern repeats indefinitely and count is always 0.
  *
  * @function readplay
@@ -831,6 +843,11 @@ static int lfun_readplay(lua_State *L) {
 /*** Write pattern description for specified position.
  *
  * @function writepatternline
+ * @tparam int millis the length of time to display
+ * @tparam int r the red value to display
+ * @tparam int g the green value to display
+ * @tparam int b the blue value to display
+ * @tparam int pos the position to set
  *
  */
 static int lfun_writePatternLine(lua_State *L) {
@@ -866,6 +883,11 @@ static int lfun_writePatternLine(lua_State *L) {
 /*** Read pattern description at specified position.
  *
  * @function readpatternline
+ * @tparam int pos the position to read
+ * @treturn int millis the length of time to display
+ * @treturn int r the red value displayed
+ * @treturn int g the green value displayed
+ * @treturn int b the blue value displayed
  *
  */
 static int lfun_readPatternLine(lua_State *L) {
@@ -901,6 +923,7 @@ static int lfun_readPatternLine(lua_State *L) {
 /*** Saves pattern from RAM into flash.
  *
  * @function savepattern
+ * @treturn boolean returns true if the pattern saved or nil and an error message if there was a problem
  *
  */
 static int lfun_savePattern(lua_State *L) {
