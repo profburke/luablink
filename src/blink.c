@@ -745,23 +745,23 @@ static int lfun_readRGB(lua_State *L) {
  * well as an optional count (0 = loop forever).
  *
  * @function play
+ * @tparam[opt] int count the number of times to play
  * @tparam[opt] int start the starting position
  * @tparam[opt] int stop the end position
- * @tparam[opt] int count the number of times to play
  *
  */
 static int lfun_play(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
-  int startpos = luaL_optinteger(L, 2, 0);
-  int endpos = luaL_optinteger(L, 3, 0);
-  int count = luaL_optinteger(L, 4, 0);
+  int count = luaL_optinteger(L, 2, 0);
+  int startpos = luaL_optinteger(L, 3, 0);
+  int endpos = luaL_optinteger(L, 4, 0);
 
   // TODO: adjust upper bound based on whether mk1, mk2, etc.
-  luaL_argcheck(L, ( -1 < startpos && startpos < 33), 2, "starting position must be in range [0, 32]");
-  luaL_argcheck(L, ( -1 < endpos && endpos < 33), 3, "ending position must be in range [0, 32]");
-  luaL_argcheck(L, ( startpos <= endpos ), 2, "start position must be before end position");
-  luaL_argcheck(L, ( count > -1), 4, "count must be non-negative");
+  luaL_argcheck(L, ( -1 < startpos && startpos < 33), 3, "starting position must be in range [0, 32]");
+  luaL_argcheck(L, ( -1 < endpos && endpos < 33), 4, "ending position must be in range [0, 32]");
+  luaL_argcheck(L, ( startpos <= endpos ), 3, "start position must be before end position");
+  luaL_argcheck(L, ( count > -1), 2, "count must be non-negative");
   
   int result = blink1_playloop(bd->device, PATTERNPLAY_START, startpos, endpos, count);
 
@@ -842,7 +842,7 @@ static int lfun_readplay(lua_State *L) {
 
 /*** Write pattern description for specified position.
  *
- * @function writepatternline
+ * @function setpattpos
  * @tparam int millis the length of time to display
  * @tparam int r the red value to display
  * @tparam int g the green value to display
@@ -850,7 +850,7 @@ static int lfun_readplay(lua_State *L) {
  * @tparam int pos the position to set
  *
  */
-static int lfun_writePatternLine(lua_State *L) {
+static int lfun_setPatternPosition(lua_State *L) {
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
 
   int millis = luaL_checkinteger(L, 2);
@@ -882,7 +882,7 @@ static int lfun_writePatternLine(lua_State *L) {
 
 /*** Read pattern description at specified position.
  *
- * @function readpatternline
+ * @function getpattpos
  * @tparam int pos the position to read
  * @treturn int millis the length of time to display
  * @treturn int r the red value displayed
@@ -890,7 +890,7 @@ static int lfun_writePatternLine(lua_State *L) {
  * @treturn int b the blue value displayed
  *
  */
-static int lfun_readPatternLine(lua_State *L) {
+static int lfun_getPatternPosition(lua_State *L) {
   // TODO: return value as table?
   blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
   
@@ -980,9 +980,9 @@ static const luaL_Reg lblink_methods[] = {
   {"readplay", lfun_readplay},
   {"stop", lfun_stop},
 
-  {"readpatternline", lfun_readPatternLine},
+  {"getpattpos", lfun_getPatternPosition},
   {"savepattern", lfun_savePattern},
-  {"writepatternline", lfun_writePatternLine},
+  {"setpattpos", lfun_setPatternPosition},
 
   {"__gc", lfun_close},
   {"__tostring", lfun_tostring},
