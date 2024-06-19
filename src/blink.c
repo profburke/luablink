@@ -758,8 +758,8 @@ static int lfun_play(lua_State *L) {
   int endpos = luaL_optinteger(L, 4, 0);
 
   // TODO: adjust upper bound based on whether mk1, mk2, etc.
-  luaL_argcheck(L, ( -1 < startpos && startpos < 33), 3, "starting position must be in range [0, 32]");
-  luaL_argcheck(L, ( -1 < endpos && endpos < 33), 4, "ending position must be in range [0, 32]");
+  luaL_argcheck(L, ( -1 < startpos && startpos < 32), 3, "starting position must be in range [0, 32)");
+  luaL_argcheck(L, ( -1 < endpos && endpos < 32), 4, "ending position must be in range [0, 32)");
   luaL_argcheck(L, ( startpos <= endpos ), 3, "start position must be before end position");
   luaL_argcheck(L, ( count > -1), 2, "count must be non-negative");
   
@@ -864,7 +864,7 @@ static int lfun_setPatternPosition(lua_State *L) {
   luaL_argcheck(L, ( -1 < g && g < 256), 4, BADGREEN_MSG);
   luaL_argcheck(L, ( -1 < b && b < 256), 5, BADBLUE_MSG);
   // TODO: make upper bound dependent on whether it's a mk2, etc
-  luaL_argcheck(L, ( -1 < pos && pos < 33 ), 6, "position must be in range [0, 32]");
+  luaL_argcheck(L, ( -1 < pos && pos < 32 ), 6, "position must be in range [0, 32)");
 
 
   int result = blink1_writePatternLine(bd->device, millis, r, g, b, pos);
@@ -896,7 +896,7 @@ static int lfun_getPatternPosition(lua_State *L) {
   
   int pos = luaL_checkinteger(L, 2);
   // TODO: make upper bound dependent on whether it's a mk2, etc
-  luaL_argcheck(L, ( -1 < pos && pos < 33), 2, "position must be in range [0, 32]");
+  luaL_argcheck(L, ( -1 < pos && pos < 32), 2, "position must be in range [0, 32)");
 
   uint16_t millis;
   uint8_t r;
@@ -920,6 +920,76 @@ static int lfun_getPatternPosition(lua_State *L) {
   }
 }
 
+/*** Clears the entire pattern.
+ *
+ * @function clearpattern
+ *
+ */
+static int lfun_clearPattern(lua_State *L) {
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+
+  // TODO: adjust the upper bound based on which version blink the device is
+  for (int i = 0; i <= 32; i++) {
+    // TODO: do something with result
+    int result = blink1_writePatternLine(bd->device, 0, 0, 0, 0, i);
+  }
+  
+  return 0;
+}
+
+/*** Returns the devices pattern in a Lua table.
+ *
+ * @function readpattern
+ * @treturn table TBD
+ *
+ */
+static int lfun_readPattern(lua_State *L) {
+  uint16_t millis;
+  uint8_t r, g, b;
+
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+
+  lua_createtable(L, 32 + 1, 0);
+  
+  // TODO: adjust the upper bound based on which version blink the device is
+  for (int pos = 0; pos <= 32; pos++) {
+    lua_pushinteger(L, pos);
+    lua_createtable(L, 0, 4);
+
+    // TODO: do something with result
+    int result = blink1_readPatternLine(bd->device, &millis, &r, &g, &b, pos);
+
+    lua_pushstring(L, "millis");
+    lua_pushinteger(L, millis);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "red");
+    lua_pushinteger(L, r);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "green");
+    lua_pushinteger(L, g);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "blue");
+    lua_pushinteger(L, b);
+    lua_settable(L, -3);
+
+    lua_settable(L, -3);
+  }
+  
+  return 1;
+}
+
+/*** Writes a pattern ...
+ *
+ * @function writepattern
+ *
+ */
+static int lfun_writePattern(lua_State *L) {
+  return 0;
+}
+ 
 /*** Saves pattern from RAM into flash.
  *
  * @function savepattern
@@ -980,9 +1050,12 @@ static const luaL_Reg lblink_methods[] = {
   {"readplay", lfun_readplay},
   {"stop", lfun_stop},
 
+  {"clearpattern", lfun_clearPattern},
   {"getpattpos", lfun_getPatternPosition},
+  {"readpattern", lfun_readPattern},
   {"savepattern", lfun_savePattern},
   {"setpattpos", lfun_setPatternPosition},
+  {"writepattern", lfun_writePattern},
 
   {"__gc", lfun_close},
   {"__tostring", lfun_tostring},
@@ -1001,9 +1074,9 @@ static const luaL_Reg lblink_functions[] = {
   {"list", lfun_list}, 
   {"open", lfun_open},
   {"noGamma", lfun_noDegamma},
-  {"pid", lfun_pid},
+  {"pid", lfun_pid}, // TODO: redundant, keep the table field and zap this?
   {"sleep", lfun_sleep},
-  {"vid", lfun_vid},
+  {"vid", lfun_vid}, // TODO: redundant, keep the table field and zap this?
   {NULL, NULL}
 };
 
