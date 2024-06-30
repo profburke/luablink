@@ -228,7 +228,7 @@
 <h2><a href="#Pattern_Methods">Pattern Methods </a></h2>
 <table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#play">play ([start[, stop[, count]]])</a></td>
+	<td class="name" nowrap><a href="#play">play ([count[, start[, stop]]])</a></td>
 	<td class="summary">Plays the current pattern.</td>
 	</tr>
 	<tr>
@@ -240,12 +240,24 @@
 	<td class="summary">Retrieves information on current play state.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#writepatternline">writepatternline (millis, r, g, b, pos)</a></td>
+	<td class="name" nowrap><a href="#setpattpos">setpattpos (millis, r, g, b, pos)</a></td>
 	<td class="summary">Write pattern description for specified position.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#readpatternline">readpatternline (pos)</a></td>
+	<td class="name" nowrap><a href="#getpattpos">getpattpos (pos)</a></td>
 	<td class="summary">Read pattern description at specified position.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#clearpattern">clearpattern ()</a></td>
+	<td class="summary">Clears the entire pattern.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#readpattern">readpattern ()</a></td>
+	<td class="summary">Returns the devices pattern in a Lua table.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#writepattern">writepattern ()</a></td>
+	<td class="summary">Writes a pattern ...</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#savepattern">savepattern ()</a></td>
@@ -938,7 +950,7 @@
     <dl class="function">
     <dt>
     <a name = "play"></a>
-    <strong>play ([start[, stop[, count]]])</strong>
+    <strong>play ([count[, start[, stop]]])</strong>
     </dt>
     <dd>
     Plays the current pattern. </p>
@@ -949,6 +961,11 @@
 
     <h3>Parameters:</h3>
     <ul>
+        <li><span class="parameter">count</span>
+            <span class="types"><span class="type">int</span></span>
+         the number of times to play
+         (<em>optional</em>)
+        </li>
         <li><span class="parameter">start</span>
             <span class="types"><span class="type">int</span></span>
          the starting position
@@ -957,11 +974,6 @@
         <li><span class="parameter">stop</span>
             <span class="types"><span class="type">int</span></span>
          the end position
-         (<em>optional</em>)
-        </li>
-        <li><span class="parameter">count</span>
-            <span class="types"><span class="type">int</span></span>
-         the number of times to play
          (<em>optional</em>)
         </li>
     </ul>
@@ -1024,8 +1036,8 @@
 
 </dd>
     <dt>
-    <a name = "writepatternline"></a>
-    <strong>writepatternline (millis, r, g, b, pos)</strong>
+    <a name = "setpattpos"></a>
+    <strong>setpattpos (millis, r, g, b, pos)</strong>
     </dt>
     <dd>
     Write pattern description for specified position.
@@ -1061,8 +1073,8 @@
 
 </dd>
     <dt>
-    <a name = "readpatternline"></a>
-    <strong>readpatternline (pos)</strong>
+    <a name = "getpattpos"></a>
+    <strong>getpattpos (pos)</strong>
     </dt>
     <dd>
     Read pattern description at specified position.
@@ -1097,6 +1109,72 @@
 
 </dd>
     <dt>
+    <a name = "clearpattern"></a>
+    <strong>clearpattern ()</strong>
+    </dt>
+    <dd>
+    Clears the entire pattern.
+
+
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "readpattern"></a>
+    <strong>readpattern ()</strong>
+    </dt>
+    <dd>
+    Returns the devices pattern in a Lua table. </p>
+
+<p> This function returns a description of the current pattern in the
+ device's RAM. The description is formatted as a Lua table with each
+ table entry itself a sub-table describing the color details at a particular position.
+ This sub-table has entries for the red, green and blue components as well as the time
+ (in milliseconds) to display the color. Position 0 is at index 0, position 1 at index
+ 1, etc.
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.4/manual.html#6.6">table</a></span>
+        the current pattern
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#writepattern">writepattern</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "writepattern"></a>
+    <strong>writepattern ()</strong>
+    </dt>
+    <dd>
+    Writes a pattern ...
+ Pattern position indices run from 0 to MaxPattern - 1.
+ By "default", Lua table indices are 1-based. So t[1] is mapped
+ to pattern 0, etc.
+
+
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="index.html#readpattern">readpattern</a>
+    </ul>
+
+
+</dd>
+    <dt>
     <a name = "savepattern"></a>
     <strong>savepattern ()</strong>
     </dt>
@@ -1109,7 +1187,7 @@
     <ol>
 
            <span class="types"><span class="type">boolean</span></span>
-        returns true if the pattern saved or nil and an error message if there was a problem
+        returns true if the pattern saved or nil and an error message otherwise
     </ol>
 
 
@@ -1123,7 +1201,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/lunarmodules/LDoc">LDoc 1.5.0</a></i>
-<i style="float:right;">Last updated 2024-06-16 15:49:48 </i>
+<i style="float:right;">Last updated 2024-06-28 21:50:21 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>

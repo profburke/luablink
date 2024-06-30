@@ -66,6 +66,10 @@ static const char *DEVID_KEY = "devid";
 static const char *SERIALNUM_KEY = "serial";
 static const char *MARK_KEY = "mark";
 static const int DEFAULT_PAUSE = 100;
+static const char *RED_KEY = "red";
+static const char *GREEN_KEY = "green";
+static const char *BLUE_KEY = "blue";
+static const char *MILLIS_KEY = "millis";
 
 const char *LUABLINK_VERSION = "2.0.0";
 
@@ -168,6 +172,23 @@ static int lfun_list(lua_State *L) {
   }
 
   return 1;
+}
+
+static int lfun_hsbToRgb(lua_State *L) {
+  uint8_t hsbbuf[3];
+  rgb_t rgb = {0, 0, 0};
+                 
+  hsbbuf[0] = (uint8_t)luaL_checkinteger(L, 1);
+  hsbbuf[1] = (uint8_t)luaL_checkinteger(L, 2);
+  hsbbuf[2] = (uint8_t)luaL_checkinteger(L, 3);
+
+  hsbtorgb(&rgb, hsbbuf);
+           
+  lua_pushinteger(L, rgb.r);
+  lua_pushinteger(L, rgb.g);
+  lua_pushinteger(L, rgb.b);
+
+  return 3;
 }
 
 /*** Disables gamma correction.
@@ -931,7 +952,7 @@ static int lfun_clearPattern(lua_State *L) {
   // TODO: adjust the upper bound based on which version blink the device is
   for (int i = 0; i <= 32; i++) {
     // TODO: do something with result
-    int result = blink1_writePatternLine(bd->device, 0, 0, 0, 0, i);
+    /*int result = */blink1_writePatternLine(bd->device, 0, 0, 0, 0, i);
   }
   
   return 0;
@@ -939,8 +960,16 @@ static int lfun_clearPattern(lua_State *L) {
 
 /*** Returns the devices pattern in a Lua table.
  *
+ * This function returns a description of the current pattern in the
+ * device's RAM. The description is formatted as a Lua table with each
+ * table entry itself a sub-table describing the color details at a particular position.
+ * This sub-table has entries for the red, green and blue components as well as the time
+ * (in milliseconds) to display the color. Position 0 is at index 0, position 1 at index
+ * 1, etc.
+ 
  * @function readpattern
- * @treturn table TBD
+ * @treturn table the current pattern
+ * @see writepattern
  *
  */
 static int lfun_readPattern(lua_State *L) {
@@ -957,21 +986,23 @@ static int lfun_readPattern(lua_State *L) {
     lua_createtable(L, 0, 4);
 
     // TODO: do something with result
-    int result = blink1_readPatternLine(bd->device, &millis, &r, &g, &b, pos);
+    // TODO: use blink1_readPatternLineN instead (which blinks does that work with?)
+    // TODO: write a helper function for setting tables...
+    /*int result = */blink1_readPatternLine(bd->device, &millis, &r, &g, &b, pos);
 
-    lua_pushstring(L, "millis");
+    lua_pushstring(L, MILLIS_KEY);
     lua_pushinteger(L, millis);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "red");
+    lua_pushstring(L, RED_KEY);
     lua_pushinteger(L, r);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "green");
+    lua_pushstring(L, GREEN_KEY);
     lua_pushinteger(L, g);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "blue");
+    lua_pushstring(L, BLUE_KEY);
     lua_pushinteger(L, b);
     lua_settable(L, -3);
 
@@ -982,18 +1013,58 @@ static int lfun_readPattern(lua_State *L) {
 }
 
 /*** Writes a pattern ...
+ * Pattern position indices run from 0 to MaxPattern - 1.
+ * By "default", Lua table indices are 1-based. So t[1] is mapped
+ * to pattern 0, etc.
  *
  * @function writepattern
+ * @see readpattern
  *
  */
 static int lfun_writePattern(lua_State *L) {
+  blinker *bd = luaL_checkudata(L, 1, BLINK_TYPENAME);
+  int patMax = luaL_len(L, -1);
+
+  for (int i = 0; i < patMax; i++) {
+    // TODO: and a helper function for getting tables...
+    lua_pushinteger(L, i + 1); 
+    lua_gettable(L, -2); // gets sub-table for position i
+
+    lua_pushstring(L, MILLIS_KEY);
+    lua_gettable(L, -2);
+    uint16_t millis = (uint16_t)lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    
+    lua_pushstring(L, RED_KEY);
+    lua_gettable(L, -2);
+    uint8_t r = (uint8_t)lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    
+    lua_pushstring(L, GREEN_KEY);
+    lua_gettable(L, -2);
+    uint8_t g = (uint8_t)lua_tointeger(L, -1);
+    lua_pop(L, 1);
+    
+    lua_pushstring(L, BLUE_KEY);
+    lua_gettable(L, -2);
+    uint8_t b = (uint8_t)lua_tointeger(L, -1);
+    lua_pop(L, 1);
+
+    printf("[%d] writing %d %d %d -- %d\n", i, r, g, b, millis);
+    blink1_writePatternLine(bd->device, millis, r, g, b, i);
+    // now drop sub-table at top of stack
+    lua_pop(L, 1);
+  }
+
+  // TODO: check that stack accesses are balanced...
+  // TODO: error checking
   return 0;
 }
  
 /*** Saves pattern from RAM into flash.
  *
  * @function savepattern
- * @treturn boolean returns true if the pattern saved or nil and an error message if there was a problem
+ * @treturn boolean returns true if the pattern saved or nil and an error message otherwise
  *
  */
 static int lfun_savePattern(lua_State *L) {
@@ -1071,6 +1142,7 @@ static const luaL_Reg lblink_methods[] = {
 static const luaL_Reg lblink_functions[] = {
   {"enumerate", lfun_enumerate},
   {"gamma", lfun_yesDegamma},
+  {"hsbtorgb", lfun_hsbToRgb},
   {"list", lfun_list}, 
   {"open", lfun_open},
   {"noGamma", lfun_noDegamma},
