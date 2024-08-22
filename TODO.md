@@ -8,15 +8,6 @@
 - {"serverdown", lfun_serverdown},
 - add "Release History" to README (see https://github.com/rgieseke/textui)
 
-### Completed Items
-- Methods should give errors when called on closed devices.
-
-- what about new functionality?
-- look at blink1-tool
-- look at python and other language libs
-
-- make decisions about #define vs static const
-- finish moving all (most) string literals
 
 ### Unimplemented
 
@@ -27,3 +18,15 @@
 - set entire pattern (all 32 slots)  as string
 - get entire pattern (as string)
 
+
+### Misc
+
+- isolate from changes in blink1-lib; at the very least, specify a commit hash that this code is known to work with
+- improve docs: content and formatting
+- add some more examples (link to Morse and Color Swatches)
+- link to docs from README
+- maybe a GH Pages site to display the docs (and a link from README)
+- improve the makefile
+- add additional functionality in Lua, such as clearpattern, chase, glitter, etc
+- rethink some of the function names
+- optional arg to stop command that also turns blink off

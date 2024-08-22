@@ -37,9 +37,25 @@ This slightly more extensive example toggles the blink between red and blue:
 
 The library was developed and tested using [Lua](http://lua.org) 5.2.3. However it should run on other versions of Lua with little or no modification. 
 
-It does depend on the Blink1 [command line tool](https://github.com/todbot/blink1/blob/master/docs/blink1-tool.md). Currently the makefile assumes this is already built and, specifically, that the include and dynamic library files are available in `/usr/local/include` and `/usr/local/lib` respectively. If you have these files in a different directory, you can adjust the makefile as appropriate.
+It does depend on the Blink1 [command line tool](https://github.com/todbot/blink1/blob/master/docs/blink1-tool.md). Currently the `Makefile` assumes this is already built and, specifically, that the include and dynamic library files are available in `/usr/local/include` and `/usr/local/lib` respectively. If you have these files in a different directory, you can adjust the `Makefile` as appropriate.
 
-Future versions of the build process may handle downloading, building and installing the Blink1 library automatically if it's not currently available.
+Future versions of the build process may handle downloading, building and installing the Blink1 library automatically if it's not currently available. The `Makefile` is dependent on GNU Make 4.0 or later.
+
+In a nutshell, here's how to grab, build, and install the software:
+
+```
+git clone https://github.com/profburke/luablink.git
+cd luablink/src
+make install
+
+```
+
+Unless you make changes to the software, you won't need to re-generate the documentation, but just in case, use the `Makefile` in the top-level directory:
+
+```
+cd ..
+make docs
+```
 
 ## Documentation
 
@@ -51,7 +67,9 @@ API documentation be found in the `doc` subdirectory, the project uses [ldoc](ht
 
 **Help and contributions are encouraged and greatly appreciated!** 
 
-Code changes, documentation improvement, more examples, ..., a cool logo&mdash;there are a wide range of ways you can contribute. The best way to contact me regarding this library is to post an issue to the [github repository](https://github.com/profburke/luablink/issues).
+Code changes, documentation improvement, more examples, ..., a cool logo&mdash;there are a wide range of ways you can contribute. A few particular needs are: one or more people to test this software on a Linux machine, help porting to Windows, and help porting to Raspberry Pi.
+
+The best way to contact me regarding this library is to post an issue to the [github repository](https://github.com/profburke/luablink/issues).
 
 ## License
 
